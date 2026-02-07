@@ -1,14 +1,14 @@
 'use client';
 import React from 'react';
 import { WagmiConfig, createConfig } from 'wagmi';
-import { mainnet } from 'wagmi/chains'; // O erro estava aqui, corrigido!
+import { mainnet } from 'wagmi/chains';
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const config = createConfig(
   getDefaultConfig({
     appName: 'ClearSwap',
-    chains: [mainnet], // Depois adicionaremos a ARC aqui
+    chains: [mainnet],
     walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b',
   }),
 );
@@ -19,7 +19,7 @@ export default function ClearSwap() {
   return (
     <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider theme="dark">
+        <ConnectKitProvider>
           <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
             
             <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '10px' }}>ClearSwap</h1>
@@ -42,15 +42,7 @@ export default function ClearSwap() {
                 </div>
               </div>
 
-              <ConnectKitButton.Custom>
-                {({ isConnected, show, truncatedAddress, ensName }) => {
-                  return (
-                    <button onClick={show} style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}>
-                      {isConnected ? (ensName ?? truncatedAddress) : "Conectar Carteira"}
-                    </button>
-                  );
-                }}
-              </ConnectKitButton.Custom>
+              <ConnectKitButton />
             </div>
 
             <p style={{ marginTop: '20px', color: '#444', fontSize: '12px' }}>ClearSwap Protocol v1.0</p>
