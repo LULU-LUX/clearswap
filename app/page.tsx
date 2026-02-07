@@ -36,10 +36,11 @@ const TOKEN_LIST = [
 ];
 
 function DexInterface() {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, status } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'swap' | 'liquidity'>('swap');
   const [sellToken, setSellToken] = useState(TOKEN_LIST[0]);
   const [buyToken, setBuyToken] = useState(TOKEN_LIST[1]);
@@ -47,24 +48,25 @@ function DexInterface() {
   const [buyAmount, setBuyAmount] = useState('');
   const [showModal, setShowModal] = useState<'sell' | 'buy' | null>(null);
 
+  // Evita erros de hidratação no Next.js
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // BUSCA DE SALDO CORRIGIDA PARA O BUILD
   const { data: balance, isLoading, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
   });
 
-  // Efeito para garantir que o saldo seja buscado no refresh e em intervalos
+  // LOGICA DE OURO: Força o refetch quando o status da conexão muda para 'connected'
   useEffect(() => {
-    if (isConnected && address) {
+    if (status === 'connected' && address) {
       refetch();
-      // Cria um intervalo para atualizar o saldo a cada 10 segundos sem precisar do 'watch'
-      const interval = setInterval(() => refetch(), 10000);
-      return () => clearInterval(interval);
     }
-  }, [isConnected, address, chainId, sellToken, refetch]);
+  }, [status, address, refetch, sellToken]);
 
   useEffect(() => {
     const val = Number(sellAmount);
@@ -92,6 +94,8 @@ function DexInterface() {
     setBuyToken(temp);
     setSellAmount('');
   };
+
+  if (!mounted) return null;
 
   return (
     <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
