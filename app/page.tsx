@@ -38,7 +38,7 @@ export default function ClearSwap() {
   return (
     <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider theme="dark">
+        <ConnectKitProvider>
           <div style={{ 
             backgroundColor: '#000', 
             color: '#fff', 
@@ -62,7 +62,6 @@ export default function ClearSwap() {
               boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
               
-              {/* Seção Enviar */}
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ fontSize: '12px', color: '#aaa', marginLeft: '5px' }}>Você envia</label>
                 <div style={{ 
@@ -79,10 +78,8 @@ export default function ClearSwap() {
                 </div>
               </div>
 
-              {/* Ícone de Seta (Visual) */}
               <div style={{ textAlign: 'center', marginBottom: '10px', color: '#555' }}>↓</div>
 
-              {/* Seção Receber */}
               <div style={{ marginBottom: '25px' }}>
                 <label style={{ fontSize: '12px', color: '#aaa', marginLeft: '5px' }}>Você recebe</label>
                 <div style={{ 
@@ -99,7 +96,6 @@ export default function ClearSwap() {
                 </div>
               </div>
 
-              {/* Botão de Conexão e Ação */}
               <ConnectKitButton.Custom>
                 {({ isConnected, show, truncatedAddress, ensName }) => {
                   if (!isConnected) {
