@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchNetwork, useNetwork } from 'wagmi';
+import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useChainId } from 'wagmi';
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -37,8 +37,8 @@ const TOKEN_LIST = [
 
 function DexInterface() {
   const { isConnected, address } = useAccount();
-  const { chain } = useNetwork();
-  const { switchNetwork } = useSwitchNetwork();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   
   const [sellToken, setSellToken] = useState(TOKEN_LIST[0]);
   const [buyToken, setBuyToken] = useState(TOKEN_LIST[1]);
@@ -46,18 +46,17 @@ function DexInterface() {
   const [buyAmount, setBuyAmount] = useState('');
   const [showModal, setShowModal] = useState<'sell' | 'buy' | null>(null);
 
-  const isWrongNetwork = isConnected && chain?.id !== arcTestnet.id;
+  const isWrongNetwork = isConnected && chainId !== arcTestnet.id;
 
-  // Busca saldo do token selecionado para venda
-  const { data: balance, isError, isLoading } = useBalance({
+  // Busca saldo do token selecionado
+  const { data: balance, isLoading } = useBalance({
     address: address,
     token: sellToken.address as `0x${string}`,
-    chainId: arcTestnet.id,
-    watch: true, // Força a atualização em tempo real
   });
 
   useEffect(() => {
     if (sellAmount && !isNaN(Number(sellAmount))) {
+      // Simulação simples de taxa de câmbio
       setBuyAmount((Number(sellAmount) * 0.92).toFixed(4));
     } else {
       setBuyAmount('');
@@ -69,7 +68,6 @@ function DexInterface() {
     setSellToken(buyToken);
     setBuyToken(temp);
     setSellAmount('');
-    setBuyAmount('');
   };
 
   return (
@@ -82,7 +80,7 @@ function DexInterface() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {isConnected && (
             <div 
-              onClick={() => isWrongNetwork && switchNetwork?.(arcTestnet.id)}
+              onClick={() => isWrongNetwork && switchChain?.({ chainId: arcTestnet.id })}
               style={{ 
                 cursor: isWrongNetwork ? 'pointer' : 'default',
                 display: 'flex',
@@ -96,31 +94,24 @@ function DexInterface() {
                 fontWeight: 'bold'
               }}
             >
-              {isWrongNetwork ? '⚠️ Trocar para ARC' : '🌐 ARC Testnet'}
+              {isWrongNetwork ? '⚠️ Mudar para ARC' : '🌐 ARC Testnet'}
             </div>
           )}
           <ConnectKitButton />
         </div>
       </nav>
 
+      {/* CARD DE SWAP */}
       <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', marginTop: '100px', position: 'relative' }}>
         
-        {isWrongNetwork && (
-          <div style={{ backgroundColor: '#ff444422', color: '#ff4444', padding: '10px', borderRadius: '12px', marginBottom: '15px', fontSize: '12px', textAlign: 'center', border: '1px solid #ff4444' }}>
-            Você está na rede errada. Clique no botão acima para mudar para ARC Testnet.
-          </div>
-        )}
-
         <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
             <span>Você vende</span>
-            <span>
-               Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}
-            </span>
+            <span>Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <input type="number" placeholder="0.0" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '50%' }} />
-            <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold' }}>
+            <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
               {sellToken.symbol} ▾
             </button>
           </div>
@@ -134,7 +125,7 @@ function DexInterface() {
           <div style={{ color: '#888', fontSize: '13px', marginBottom: '10px' }}>Você recebe</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '50%' }} />
-            <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold' }}>
+            <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
               {buyToken.symbol} ▾
             </button>
           </div>
@@ -143,23 +134,23 @@ function DexInterface() {
         <ConnectKitButton.Custom>
           {({ isConnected, show }) => (
             <button 
-              disabled={isWrongNetwork}
+              disabled={isWrongNetwork && isConnected}
               onClick={isConnected ? undefined : show} 
               style={{ 
                 width: '100%', padding: '18px', borderRadius: '18px', border: 'none', 
-                backgroundColor: isWrongNetwork ? '#333' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), 
+                backgroundColor: (isWrongNetwork && isConnected) ? '#333' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), 
                 color: '#000', fontWeight: 'bold', 
-                cursor: isWrongNetwork ? 'not-allowed' : 'pointer' 
+                cursor: (isWrongNetwork && isConnected) ? 'not-allowed' : 'pointer' 
               }}>
-              {isWrongNetwork ? 'Mude a Rede' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
+              {isWrongNetwork && isConnected ? 'Rede Incorreta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
             </button>
           )}
         </ConnectKitButton.Custom>
 
-        {/* MODAL DE TOKENS (Simples para o exemplo) */}
+        {/* MODAL DE SELEÇÃO */}
         {showModal && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '28px', padding: '20px', zIndex: 10, border: '1px solid #333' }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
               <span style={{ fontWeight: 'bold' }}>Selecionar Token</span>
               <button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
             </div>
@@ -170,7 +161,7 @@ function DexInterface() {
                 setShowModal(null);
               }} style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', border: '1px solid #222', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 'bold' }}>{token.symbol}</span>
-                <span style={{ fontSize: '10px', color: '#555' }}>{token.address.slice(0, 8)}...</span>
+                <span style={{ fontSize: '10px', color: '#555' }}>{token.address.slice(0, 10)}...</span>
               </div>
             ))}
           </div>
