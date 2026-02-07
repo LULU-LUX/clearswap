@@ -62,6 +62,7 @@ export default function ClearSwap() {
               boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
               
+              {/* Seção Enviar */}
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ fontSize: '12px', color: '#aaa', marginLeft: '5px' }}>Você envia</label>
                 <div style={{ 
@@ -78,8 +79,10 @@ export default function ClearSwap() {
                 </div>
               </div>
 
+              {/* Ícone de Seta (Visual) */}
               <div style={{ textAlign: 'center', marginBottom: '10px', color: '#555' }}>↓</div>
 
+              {/* Seção Receber */}
               <div style={{ marginBottom: '25px' }}>
                 <label style={{ fontSize: '12px', color: '#aaa', marginLeft: '5px' }}>Você recebe</label>
                 <div style={{ 
@@ -96,6 +99,7 @@ export default function ClearSwap() {
                 </div>
               </div>
 
+              {/* Botão de Conexão e Ação */}
               <ConnectKitButton.Custom>
                 {({ isConnected, show, truncatedAddress, ensName }) => {
                   if (!isConnected) {
@@ -110,8 +114,8 @@ export default function ClearSwap() {
                       <button style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', backgroundColor: '#222', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}>
                         Fazer Swap
                       </button>
-                      <button onClick={show} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '12px' }}>
-                        Conectado: {ensName ?? truncatedAddress}
+                      <button onClick={show} style={{ background: '#1a1a1a', border: '1px solid #333', padding: '8px', borderRadius: '8px', color: '#888', cursor: 'pointer', fontSize: '12px', transition: '0.2s' }}>
+                        👤 {ensName ?? truncatedAddress} (Clique para Sair)
                       </button>
                     </div>
                   );
