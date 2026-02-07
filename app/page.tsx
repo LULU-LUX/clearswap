@@ -20,7 +20,6 @@ const arcTestnet = {
   testnet: true,
 };
 
-// Configuração corrigida para o build passar
 const config = createConfig(
   getDefaultConfig({
     appName: 'ClearSwap',
@@ -50,18 +49,20 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // Busca de saldo com watch para atualização constante
+  // BUSCA DE SALDO CORRIGIDA PARA O BUILD
   const { data: balance, isLoading, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
-    watch: true, // Mantém o saldo atualizado em tempo real
   });
 
-  // Força o refetch quando a página carrega ou o endereço é detectado
+  // Efeito para garantir que o saldo seja buscado no refresh e em intervalos
   useEffect(() => {
     if (isConnected && address) {
       refetch();
+      // Cria um intervalo para atualizar o saldo a cada 10 segundos sem precisar do 'watch'
+      const interval = setInterval(() => refetch(), 10000);
+      return () => clearInterval(interval);
     }
   }, [isConnected, address, chainId, sellToken, refetch]);
 
