@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useChainId } from 'wagmi';
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // --- CONFIGURAÇÃO OFICIAL ARC TESTNET ---
 const arcTestnet = {
@@ -36,10 +36,9 @@ const TOKEN_LIST = [
 ];
 
 function DexInterface() {
-  const { isConnected, address, status } = useAccount();
+  const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
-  const queryClient = useQueryClient(); // Acesso ao gerenciador de cache
   
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'swap' | 'liquidity'>('swap');
@@ -55,21 +54,31 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  const { data: balance, isLoading, refetch } = useBalance({
+  // Busca de saldo
+  const { data: balance, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
   });
 
-  // SOLUÇÃO DEFINITIVA: Limpa o cache e força nova busca ao detectar conexão
+  // SISTEMA DE ATUALIZAÇÃO FORÇADA (ANTI-REFRESH ZERO)
   useEffect(() => {
-    if (status === 'connected' && address) {
-      // Limpa qualquer dado antigo/zerado do cache
-      queryClient.invalidateQueries();
-      // Força a busca imediata
+    let interval: NodeJS.Timeout;
+
+    if (isConnected && address) {
+      // Tenta carregar imediatamente
       refetch();
+
+      // Força uma nova tentativa a cada 3 segundos para garantir que o saldo apareça
+      interval = setInterval(() => {
+        refetch();
+      }, 3000);
     }
-  }, [status, address, queryClient, refetch, sellToken]);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isConnected, address, sellToken, refetch]);
 
   useEffect(() => {
     const val = Number(sellAmount);
@@ -131,6 +140,7 @@ function DexInterface() {
         </div>
       </nav>
 
+      {/* ABAS */}
       <div style={{ marginTop: '60px', marginBottom: '20px', display: 'flex', backgroundColor: '#111', padding: '5px', borderRadius: '16px', border: '1px solid #222' }}>
         <button 
           onClick={() => setActiveTab('swap')}
@@ -149,7 +159,7 @@ function DexInterface() {
             <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
                 <span>Você vende</span>
-                <span>Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}</span>
+                <span>Saldo: {isConnected ? (balance ? `${Number(balance.formatted).toFixed(4)}` : '0.0000') : '0.0000'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input 
