@@ -12,7 +12,7 @@ const { data: balance } = useBalance({ address: address });
 
 useEffect(() => { if (sellAmount && !isNaN(Number(sellAmount))) { setBuyAmount((Number(sellAmount) * 0.92).toFixed(4)); } else { setBuyAmount(''); } }, [sellAmount]);
 
-return ( <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
+return ( <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}> <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}> <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>CLEARSWAP</div> <ConnectKitButton /> </nav>
 
 ); }
 
