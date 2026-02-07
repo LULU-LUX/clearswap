@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useChainId } from 'wagmi';
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 
 // --- CONFIGURAÇÃO OFICIAL ARC TESTNET ---
 const arcTestnet = {
@@ -28,7 +28,7 @@ const config = createConfig(
   }),
 );
 
-const queryClient = new QueryClient();
+const globalQueryClient = new QueryClient();
 
 const TOKEN_LIST = [
   { symbol: 'USDC', address: '0x3600000000000000000000000000000000000000' as `0x${string}` },
@@ -39,6 +39,7 @@ function DexInterface() {
   const { isConnected, address, status } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const queryClient = useQueryClient(); // Acesso ao gerenciador de cache
   
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'swap' | 'liquidity'>('swap');
@@ -48,7 +49,6 @@ function DexInterface() {
   const [buyAmount, setBuyAmount] = useState('');
   const [showModal, setShowModal] = useState<'sell' | 'buy' | null>(null);
 
-  // Evita erros de hidratação no Next.js
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -61,12 +61,15 @@ function DexInterface() {
     chainId: 5042002,
   });
 
-  // LOGICA DE OURO: Força o refetch quando o status da conexão muda para 'connected'
+  // SOLUÇÃO DEFINITIVA: Limpa o cache e força nova busca ao detectar conexão
   useEffect(() => {
     if (status === 'connected' && address) {
+      // Limpa qualquer dado antigo/zerado do cache
+      queryClient.invalidateQueries();
+      // Força a busca imediata
       refetch();
     }
-  }, [status, address, refetch, sellToken]);
+  }, [status, address, queryClient, refetch, sellToken]);
 
   useEffect(() => {
     const val = Number(sellAmount);
@@ -202,7 +205,7 @@ function DexInterface() {
 export default function ClearSwap() {
   return (
     <WagmiConfig config={config}>
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={globalQueryClient}>
         <ConnectKitProvider mode="dark">
           <DexInterface />
         </ConnectKitProvider>
