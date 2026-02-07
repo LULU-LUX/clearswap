@@ -25,6 +25,8 @@ const config = createConfig(
     appName: 'ClearSwap',
     chains: [arcTestnet],
     walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b',
+    // Isso força a reconexão automática ao dar refresh
+    autoConnect: true,
   }),
 );
 
@@ -49,21 +51,22 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // Busca saldo do token (USDC ou EURC) na rede correta
+  // BUSCA DE SALDO COM WATCH E REFETCH FORÇADO
   const { data: balance, isLoading, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
+    // Watch faz o wagmi observar mudanças de bloco e atualizar o saldo
+    watch: true,
   });
 
-  // Garante que o saldo atualize quando mudar o token ou a rede
+  // Efeito para garantir que o saldo seja buscado assim que o endereço estiver disponível
   useEffect(() => {
-    if (isConnected && !isWrongNetwork) {
+    if (isConnected && address && !isWrongNetwork) {
       refetch();
     }
-  }, [chainId, isConnected, sellToken, isWrongNetwork, refetch]);
+  }, [address, isConnected, chainId, sellToken, isWrongNetwork, refetch]);
 
-  // Cálculo de swap (simulado) bloqueando negativos
   useEffect(() => {
     const val = Number(sellAmount);
     if (sellAmount && !isNaN(val) && val >= 0) {
@@ -94,7 +97,6 @@ function DexInterface() {
   return (
     <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
       
-      {/* NAVBAR */}
       <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>
           CLEAR<span style={{color: '#fff'}}>SWAP</span>
@@ -123,7 +125,6 @@ function DexInterface() {
         </div>
       </nav>
 
-      {/* TABS (VOLTARAM) */}
       <div style={{ marginTop: '60px', marginBottom: '20px', display: 'flex', backgroundColor: '#111', padding: '5px', borderRadius: '16px', border: '1px solid #222' }}>
         <button 
           onClick={() => setActiveTab('swap')}
@@ -135,7 +136,6 @@ function DexInterface() {
         >Liquidez</button>
       </div>
 
-      {/* CONTEÚDO */}
       <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', position: 'relative' }}>
         
         {activeTab === 'swap' ? (
@@ -175,8 +175,8 @@ function DexInterface() {
           {({ isConnected, show }) => (
             <button 
               onClick={isWrongNetwork ? handleSwitchNetwork : (isConnected ? undefined : show)} 
-              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: isWrongNetwork ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
-              {isWrongNetwork ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
+              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: (isWrongNetwork && isConnected) ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
+              {isWrongNetwork && isConnected ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
             </button>
           )}
         </ConnectKitButton.Custom>
