@@ -20,13 +20,12 @@ const arcTestnet = {
   testnet: true,
 };
 
+// Configuração corrigida para o build passar
 const config = createConfig(
   getDefaultConfig({
     appName: 'ClearSwap',
     chains: [arcTestnet],
     walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b',
-    // Isso força a reconexão automática ao dar refresh
-    autoConnect: true,
   }),
 );
 
@@ -51,21 +50,20 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // BUSCA DE SALDO COM WATCH E REFETCH FORÇADO
+  // Busca de saldo com watch para atualização constante
   const { data: balance, isLoading, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
-    // Watch faz o wagmi observar mudanças de bloco e atualizar o saldo
-    watch: true,
+    watch: true, // Mantém o saldo atualizado em tempo real
   });
 
-  // Efeito para garantir que o saldo seja buscado assim que o endereço estiver disponível
+  // Força o refetch quando a página carrega ou o endereço é detectado
   useEffect(() => {
-    if (isConnected && address && !isWrongNetwork) {
+    if (isConnected && address) {
       refetch();
     }
-  }, [address, isConnected, chainId, sellToken, isWrongNetwork, refetch]);
+  }, [isConnected, address, chainId, sellToken, refetch]);
 
   useEffect(() => {
     const val = Number(sellAmount);
@@ -175,8 +173,8 @@ function DexInterface() {
           {({ isConnected, show }) => (
             <button 
               onClick={isWrongNetwork ? handleSwitchNetwork : (isConnected ? undefined : show)} 
-              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: (isWrongNetwork && isConnected) ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
-              {isWrongNetwork && isConnected ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
+              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: isWrongNetwork ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
+              {isWrongNetwork ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
             </button>
           )}
         </ConnectKitButton.Custom>
