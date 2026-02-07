@@ -5,25 +5,22 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.0",
-    "react": "^18",
-    "react-dom": "^18",
-    "wagmi": "^2.5.7",
-    "viem": "^2.7.15",
-    "@tanstack/react-query": "^5.22.2",
-    "@rainbow-me/rainbowkit": "^2.0.1"
+    "react": "latest",
+    "react-dom": "latest",
+    "next": "latest",
     "wagmi": "latest",
     "viem": "latest",
     "@tanstack/react-query": "latest",
     "connectkit": "latest"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "typescript": "^5"
+    "typescript": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
   }
 }
