@@ -1,13 +1,15 @@
 'use client';
-import React, { useState } from 'react';
-import { WagmiConfig, createConfig, mainnet } from 'wagmi';
+import React from 'react';
+import { WagmiConfig, createConfig } from 'wagmi';
+import { mainnet } from 'wagmi/chains'; // O erro estava aqui, corrigido!
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const config = createConfig(
   getDefaultConfig({
     appName: 'ClearSwap',
-    walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b', // Projeto padrão
+    chains: [mainnet], // Depois adicionaremos a ARC aqui
+    walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b',
   }),
 );
 
@@ -40,7 +42,6 @@ export default function ClearSwap() {
                 </div>
               </div>
 
-              {/* BOTAO DE CONECTAR CARTEIRA REAL */}
               <ConnectKitButton.Custom>
                 {({ isConnected, show, truncatedAddress, ensName }) => {
                   return (
