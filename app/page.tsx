@@ -4,18 +4,18 @@ import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useC
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// --- CONFIGURAÇÃO DA REDE ARC TESTNET ---
+// --- CONFIGURAÇÃO OFICIAL ARC TESTNET (ATUALIZADA) ---
 const arcTestnet = {
-  id: 570,
+  id: 5042002, // Chain ID correto conforme você conferiu
   name: 'ARC Testnet',
   network: 'arc-testnet',
-  nativeCurrency: { decimals: 18, name: 'ARC', symbol: 'ARC' },
+  nativeCurrency: { decimals: 18, name: 'USDC', symbol: 'USDC' },
   rpcUrls: {
-    default: { http: ['https://rpc-testnet.arc.io'] },
-    public: { http: ['https://rpc-testnet.arc.io'] },
+    default: { http: ['https://rpc.testnet.arc.network'] },
+    public: { http: ['https://rpc.testnet.arc.network'] },
   },
   blockExplorers: {
-    default: { name: 'ArcScan', url: 'https://explorer-testnet.arc.io' },
+    default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
   },
   testnet: true,
 };
@@ -30,9 +30,10 @@ const config = createConfig(
 
 const queryClient = new QueryClient();
 
+// Lista de Tokens com os contratos que você passou
 const TOKEN_LIST = [
-  { symbol: 'USDC', address: '0x3600000000000000000000000000000000000000', decimals: 18 },
-  { symbol: 'EURC', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 18 },
+  { symbol: 'USDC', address: '0x3600000000000000000000000000000000000000' as `0x${string}` },
+  { symbol: 'EURC', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' as `0x${string}` },
 ];
 
 function DexInterface() {
@@ -46,22 +47,35 @@ function DexInterface() {
   const [buyAmount, setBuyAmount] = useState('');
   const [showModal, setShowModal] = useState<'sell' | 'buy' | null>(null);
 
-  const isWrongNetwork = isConnected && chainId !== arcTestnet.id;
+  // Agora comparando com o ID correto: 5042002
+  const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // Busca saldo do token selecionado
-  const { data: balance, isLoading } = useBalance({
+  const { data: balance, isLoading, refetch } = useBalance({
     address: address,
-    token: sellToken.address as `0x${string}`,
+    token: sellToken.address,
+    chainId: 5042002,
   });
+
+  // Atualiza saldo quando conecta ou troca de rede
+  useEffect(() => {
+    if (isConnected && !isWrongNetwork) {
+      refetch();
+    }
+  }, [chainId, isConnected, sellToken, isWrongNetwork, refetch]);
 
   useEffect(() => {
     if (sellAmount && !isNaN(Number(sellAmount))) {
-      // Simulação simples de taxa de câmbio
-      setBuyAmount((Number(sellAmount) * 0.92).toFixed(4));
+      setBuyAmount((Number(sellAmount) * 0.98).toFixed(4));
     } else {
       setBuyAmount('');
     }
-  }, [sellAmount, sellToken, buyToken]);
+  }, [sellAmount]);
+
+  const handleSwitchNetwork = () => {
+    if (switchChain) {
+      switchChain({ chainId: 5042002 });
+    }
+  };
 
   const switchTokens = () => {
     const temp = sellToken;
@@ -75,93 +89,79 @@ function DexInterface() {
       
       {/* NAVBAR */}
       <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>CLEARSWAP</div>
+        <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>
+          CLEAR<span style={{color: '#fff'}}>SWAP</span>
+        </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {isConnected && (
-            <div 
-              onClick={() => isWrongNetwork && switchChain?.({ chainId: arcTestnet.id })}
+            <button 
+              onClick={handleSwitchNetwork}
               style={{ 
-                cursor: isWrongNetwork ? 'pointer' : 'default',
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: isWrongNetwork ? '#ff4444' : '#00ff8822',
-                padding: '8px 12px',
+                backgroundColor: isWrongNetwork ? '#ff4444' : '#111',
+                padding: '8px 15px',
                 borderRadius: '12px',
                 border: `1px solid ${isWrongNetwork ? '#ff4444' : '#00ff88'}`,
                 color: isWrongNetwork ? '#fff' : '#00ff88',
-                fontSize: '14px',
-                fontWeight: 'bold'
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              {isWrongNetwork ? '⚠️ Mudar para ARC' : '🌐 ARC Testnet'}
-            </div>
+              {isWrongNetwork ? '⚠️ Mudar para ARC' : <><span style={{width: '8px', height: '8px', backgroundColor: '#00ff88', borderRadius: '50%'}}></span> ARC Testnet</>}
+            </button>
           )}
           <ConnectKitButton />
         </div>
       </nav>
 
-      {/* CARD DE SWAP */}
-      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', marginTop: '100px', position: 'relative' }}>
+      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', marginTop: '80px', position: 'relative' }}>
         
+        {/* INPUT VENDA */}
         <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
             <span>Você vende</span>
             <span>Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <input type="number" placeholder="0.0" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '50%' }} />
-            <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
-              {sellToken.symbol} ▾
-            </button>
+            <input type="number" placeholder="0.0" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} />
+            <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{sellToken.symbol} ▾</button>
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', margin: '-15px 0', position: 'relative', zIndex: 2 }}>
+        {/* INVERTER */}
+        <div style={{ textAlign: 'center', margin: '-15px 0', zIndex: 2, position: 'relative' }}>
           <button onClick={switchTokens} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#00ff88' }}>⇅</button>
         </div>
 
+        {/* INPUT RECEBER */}
         <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222', marginBottom: '20px' }}>
           <div style={{ color: '#888', fontSize: '13px', marginBottom: '10px' }}>Você recebe</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '50%' }} />
-            <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
-              {buyToken.symbol} ▾
-            </button>
+            <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '60%' }} />
+            <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{buyToken.symbol} ▾</button>
           </div>
         </div>
 
         <ConnectKitButton.Custom>
           {({ isConnected, show }) => (
             <button 
-              disabled={isWrongNetwork && isConnected}
-              onClick={isConnected ? undefined : show} 
-              style={{ 
-                width: '100%', padding: '18px', borderRadius: '18px', border: 'none', 
-                backgroundColor: (isWrongNetwork && isConnected) ? '#333' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), 
-                color: '#000', fontWeight: 'bold', 
-                cursor: (isWrongNetwork && isConnected) ? 'not-allowed' : 'pointer' 
-              }}>
-              {isWrongNetwork && isConnected ? 'Rede Incorreta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
+              onClick={isWrongNetwork ? handleSwitchNetwork : (isConnected ? undefined : show)} 
+              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: isWrongNetwork ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
+              {isWrongNetwork ? 'Clique para Mudar de Rede' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
             </button>
           )}
         </ConnectKitButton.Custom>
 
-        {/* MODAL DE SELEÇÃO */}
+        {/* SELEÇÃO DE TOKEN */}
         {showModal && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '28px', padding: '20px', zIndex: 10, border: '1px solid #333' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <span style={{ fontWeight: 'bold' }}>Selecionar Token</span>
-              <button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
-            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><span style={{ fontWeight: 'bold' }}>Selecionar Token</span><button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button></div>
             {TOKEN_LIST.map((token) => (
-              <div key={token.symbol} onClick={() => {
-                if (showModal === 'sell') setSellToken(token);
-                else setBuyToken(token);
-                setShowModal(null);
-              }} style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', border: '1px solid #222', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+              <div key={token.symbol} onClick={() => { if (showModal === 'sell') setSellToken(token); else setBuyToken(token); setShowModal(null); }} style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', border: '1px solid #222', marginBottom: '8px' }}>
                 <span style={{ fontWeight: 'bold' }}>{token.symbol}</span>
-                <span style={{ fontSize: '10px', color: '#555' }}>{token.address.slice(0, 10)}...</span>
               </div>
             ))}
           </div>
