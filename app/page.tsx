@@ -54,30 +54,23 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // Busca de saldo
+  // Busca de saldo sem a propriedade 'watch' que quebra o build
   const { data: balance, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
   });
 
-  // SISTEMA DE ATUALIZAÇÃO FORÇADA (ANTI-REFRESH ZERO)
+  // POLLING: Tenta buscar o saldo a cada 4 segundos se estiver conectado
   useEffect(() => {
     let interval: NodeJS.Timeout;
-
     if (isConnected && address) {
-      // Tenta carregar imediatamente
       refetch();
-
-      // Força uma nova tentativa a cada 3 segundos para garantir que o saldo apareça
       interval = setInterval(() => {
         refetch();
-      }, 3000);
+      }, 4000);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => { if (interval) clearInterval(interval); };
   }, [isConnected, address, sellToken, refetch]);
 
   useEffect(() => {
@@ -140,7 +133,6 @@ function DexInterface() {
         </div>
       </nav>
 
-      {/* ABAS */}
       <div style={{ marginTop: '60px', marginBottom: '20px', display: 'flex', backgroundColor: '#111', padding: '5px', borderRadius: '16px', border: '1px solid #222' }}>
         <button 
           onClick={() => setActiveTab('swap')}
@@ -159,7 +151,7 @@ function DexInterface() {
             <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
                 <span>Você vende</span>
-                <span>Saldo: {isConnected ? (balance ? `${Number(balance.formatted).toFixed(4)}` : '0.0000') : '0.0000'}</span>
+                <span>Saldo: {isConnected ? (balance ? `${Number(balance.formatted).toFixed(4)}` : '...') : '0.0000'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input 
@@ -223,5 +215,3 @@ export default function ClearSwap() {
     </WagmiConfig>
   );
 }
-
-
