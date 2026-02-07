@@ -1,17 +1,6 @@
-import './globals.css'
-
-export const metadata = {
-  title: 'ClearSwap',
-  description: 'DEX na ARC Testnet',
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-br">
+    <html lang="en">
       <body>{children}</body>
     </html>
   )
