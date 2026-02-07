@@ -4,7 +4,7 @@ import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useC
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// --- CONFIGURAÇÃO OFICIAL ARC TESTNET ---
+// --- CONFIGURAÇÃO ARC TESTNET ---
 const arcTestnet = {
   id: 5042002,
   name: 'ARC Testnet',
@@ -14,202 +14,175 @@ const arcTestnet = {
     default: { http: ['https://rpc.testnet.arc.network'] },
     public: { http: ['https://rpc.testnet.arc.network'] },
   },
-  blockExplorers: {
-    default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
-  },
+  blockExplorers: { default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' } },
   testnet: true,
 };
 
 const config = createConfig(
   getDefaultConfig({
-    appName: 'ClearSwap',
+    appName: 'ClearSwap Pro',
     chains: [arcTestnet],
     walletConnectProjectId: 'b5e5b30646c0326e63241f8742e85e2b',
   }),
 );
 
-const globalQueryClient = new QueryClient();
+const queryClient = new QueryClient();
 
 const TOKEN_LIST = [
   { symbol: 'USDC', address: '0x3600000000000000000000000000000000000000' as `0x${string}` },
   { symbol: 'EURC', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' as `0x${string}` },
 ];
 
-function DexInterface() {
+function DexApp() {
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'swap' | 'liquidity'>('swap');
+  const [activeTab, setActiveTab] = useState<'swap' | 'pool'>('swap');
+  
+  // States para Swap
   const [sellToken, setSellToken] = useState(TOKEN_LIST[0]);
   const [buyToken, setBuyToken] = useState(TOKEN_LIST[1]);
-  const [sellAmount, setSellAmount] = useState('');
-  const [buyAmount, setBuyAmount] = useState('');
-  const [showModal, setShowModal] = useState<'sell' | 'buy' | null>(null);
+  const [amount, setAmount] = useState('');
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // States para Pool
+  const [tokenA, setTokenA] = useState(TOKEN_LIST[0]);
+  const [tokenB, setTokenB] = useState(TOKEN_LIST[1]);
+  const [amountA, setAmountA] = useState('');
+  const [amountB, setAmountB] = useState('');
+
+  useEffect(() => { setMounted(true); }, []);
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
-  // Busca de saldo sem a propriedade 'watch' que quebra o build
-  const { data: balance, refetch } = useBalance({
-    address: address,
-    token: sellToken.address,
-    chainId: 5042002,
-  });
-
-  // POLLING: Tenta buscar o saldo a cada 4 segundos se estiver conectado
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isConnected && address) {
-      refetch();
-      interval = setInterval(() => {
-        refetch();
-      }, 4000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [isConnected, address, sellToken, refetch]);
+  // Busca de Saldo (Polling de 4s para evitar sumiço no refresh)
+  const { data: balA, refetch: refetchA } = useBalance({ address, token: activeTab === 'swap' ? sellToken.address : tokenA.address, chainId: 5042002 });
+  const { data: balB, refetch: refetchB } = useBalance({ address, token: activeTab === 'swap' ? buyToken.address : tokenB.address, chainId: 5042002 });
 
   useEffect(() => {
-    const val = Number(sellAmount);
-    if (sellAmount && !isNaN(val) && val >= 0) {
-      setBuyAmount((val * 0.98).toFixed(4));
-    } else {
-      setBuyAmount('');
+    if (isConnected && address && mounted) {
+      const timer = setInterval(() => { refetchA(); refetchB(); }, 4000);
+      return () => clearInterval(timer);
     }
-  }, [sellAmount, sellToken, buyToken]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '' || Number(value) >= 0) {
-      setSellAmount(value);
-    }
-  };
-
-  const handleSwitchNetwork = () => {
-    if (switchChain) switchChain({ chainId: 5042002 });
-  };
-
-  const switchTokens = () => {
-    const temp = sellToken;
-    setSellToken(buyToken);
-    setBuyToken(temp);
-    setSellAmount('');
-  };
+  }, [isConnected, address, sellToken, tokenA, mounted, refetchA, refetchB]);
 
   if (!mounted) return null;
 
   return (
-    <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
+    <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'Inter, sans-serif' }}>
       
+      {/* Header */}
       <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>
-          CLEAR<span style={{color: '#fff'}}>SWAP</span>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {isConnected && (
-            <button 
-              onClick={handleSwitchNetwork}
-              style={{ 
-                backgroundColor: isWrongNetwork ? '#ff4444' : '#111',
-                padding: '8px 15px',
-                borderRadius: '12px',
-                border: `1px solid ${isWrongNetwork ? '#ff4444' : '#00ff88'}`,
-                color: isWrongNetwork ? '#fff' : '#00ff88',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center', gap: '8px'
-              }}
-            >
-              {isWrongNetwork ? '⚠️ Mudar para ARC' : <><span style={{width: '8px', height: '8px', backgroundColor: '#00ff88', borderRadius: '50%'}}></span> ARC Testnet</>}
-            </button>
+        <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#00ff88', letterSpacing: '-1px' }}>CLEARSWAP</div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {isWrongNetwork && (
+            <button onClick={() => switchChain?.({ chainId: 5042002 })} style={{ backgroundColor: '#ff4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Switch to ARC</button>
           )}
           <ConnectKitButton />
         </div>
       </nav>
 
-      <div style={{ marginTop: '60px', marginBottom: '20px', display: 'flex', backgroundColor: '#111', padding: '5px', borderRadius: '16px', border: '1px solid #222' }}>
-        <button 
-          onClick={() => setActiveTab('swap')}
-          style={{ padding: '10px 25px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'swap' ? '#222' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
-        >Swap</button>
-        <button 
-          onClick={() => setActiveTab('liquidity')}
-          style={{ padding: '10px 25px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'liquidity' ? '#222' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
-        >Liquidez</button>
+      {/* Tabs Switcher */}
+      <div style={{ display: 'flex', backgroundColor: '#111', padding: '4px', borderRadius: '16px', margin: '40px 0 20px 0', border: '1px solid #222' }}>
+        {['swap', 'pool'].map((tab) => (
+          <button 
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            style={{ 
+              padding: '10px 30px', borderRadius: '12px', border: 'none', 
+              backgroundColor: activeTab === tab ? '#222' : 'transparent', 
+              color: activeTab === tab ? '#00ff88' : '#888', 
+              cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' 
+            }}
+          >
+            {tab.toUpperCase()}
+          </button>
+        ))}
       </div>
 
-      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', position: 'relative' }}>
+      {/* Card Principal */}
+      <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#111', borderRadius: '32px', padding: '24px', border: '1px solid #222', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         
         {activeTab === 'swap' ? (
-          <>
-            <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
-                <span>Você vende</span>
-                <span>Saldo: {isConnected ? (balance ? `${Number(balance.formatted).toFixed(4)}` : '...') : '0.0000'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <input 
-                  type="number" min="0" placeholder="0.0" 
-                  value={sellAmount} onChange={handleInputChange} 
-                  style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
-                />
-                <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{sellToken.symbol} ▾</button>
+          <div id="swap-ui">
+            <div style={{ marginBottom: '10px', fontSize: '14px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Vender</span>
+              <span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
+            </div>
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', border: '1px solid #222', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <input type="number" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <button style={{ backgroundColor: '#333', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', fontWeight: 'bold' }}>{sellToken.symbol}</button>
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', margin: '-15px 0', zIndex: 2, position: 'relative' }}>
-              <button onClick={switchTokens} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#00ff88' }}>⇅</button>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '-18px 0', zIndex: 2, position: 'relative' }}>
+              <button onClick={() => {setSellToken(buyToken); setBuyToken(sellToken);}} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', color: '#00ff88', padding: '8px', cursor: 'pointer' }}>⇅</button>
             </div>
 
-            <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222', marginBottom: '20px' }}>
-              <div style={{ color: '#888', fontSize: '13px', marginBottom: '10px' }}>Você recebe</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '60%' }} />
-                <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{buyToken.symbol} ▾</button>
+            <div style={{ marginTop: '10px', marginBottom: '10px', fontSize: '14px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Receber (estimado)</span>
+              <span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
+            </div>
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', border: '1px solid #222', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <input type="text" readOnly value={amount ? (Number(amount) * 0.997).toFixed(4) : ''} placeholder="0.0" style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <button style={{ backgroundColor: '#333', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', fontWeight: 'bold' }}>{buyToken.symbol}</button>
               </div>
             </div>
-          </>
+          </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Área de Liquidez (Em breve)</div>
-        )}
-
-        <ConnectKitButton.Custom>
-          {({ isConnected, show }) => (
-            <button 
-              onClick={isWrongNetwork ? handleSwitchNetwork : (isConnected ? undefined : show)} 
-              style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: isWrongNetwork ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
-              {isWrongNetwork ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
-            </button>
-          )}
-        </ConnectKitButton.Custom>
-
-        {showModal && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '28px', padding: '20px', zIndex: 10, border: '1px solid #333' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><span style={{ fontWeight: 'bold' }}>Selecionar Token</span><button onClick={() => setShowModal(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button></div>
-            {TOKEN_LIST.map((token) => (
-              <div key={token.symbol} onClick={() => { if (showModal === 'sell') setSellToken(token); else setBuyToken(token); setShowModal(null); }} style={{ padding: '12px', borderRadius: '12px', cursor: 'pointer', border: '1px solid #222', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold' }}>{token.symbol}</span>
+          <div id="pool-ui">
+            <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Adicionar Liquidez</h3>
+            <p style={{ color: '#888', fontSize: '13px', marginBottom: '20px' }}>Receba taxas de LP ao fornecer ativos para a pool.</p>
+            
+            <div style={{ backgroundColor: '#1a1a1a', padding: '15px', borderRadius: '18px', border: '1px solid #222', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <input type="number" placeholder="0.0" value={amountA} onChange={(e) => setAmountA(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', outline: 'none', width: '50%' }} />
+                <span style={{ color: '#888' }}>{tokenA.symbol}</span>
               </div>
-            ))}
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '5px', color: '#888' }}>+</div>
+
+            <div style={{ backgroundColor: '#1a1a1a', padding: '15px', borderRadius: '18px', border: '1px solid #222', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <input type="number" placeholder="0.0" value={amountB} onChange={(e) => setAmountB(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', outline: 'none', width: '50%' }} />
+                <span style={{ color: '#888' }}>{tokenB.symbol}</span>
+              </div>
+            </div>
           </div>
         )}
+
+        <button 
+          disabled={!isConnected}
+          style={{ 
+            width: '100%', padding: '20px', borderRadius: '20px', border: 'none', 
+            backgroundColor: isConnected ? '#00ff88' : '#222', 
+            color: '#000', fontWeight: '900', fontSize: '16px', cursor: 'pointer',
+            opacity: isConnected ? 1 : 0.6
+          }}
+        >
+          {isConnected ? (activeTab === 'swap' ? 'EXECUTAR SWAP' : 'SUPPLY LIQUIDITY') : 'CONECTAR CARTEIRA'}
+        </button>
+
+      </div>
+
+      {/* Footer Info */}
+      <div style={{ marginTop: '30px', color: '#444', fontSize: '12px' }}>
+        ARC Testnet ID: 5042002 | Protocolo v2 Full-Range
       </div>
     </div>
   );
 }
 
-export default function ClearSwap() {
+export default function App() {
   return (
     <WagmiConfig config={config}>
-      <QueryClientProvider client={globalQueryClient}>
+      <QueryClientProvider client={queryClient}>
         <ConnectKitProvider mode="dark">
-          <DexInterface />
+          <DexApp />
         </ConnectKitProvider>
       </QueryClientProvider>
     </WagmiConfig>
