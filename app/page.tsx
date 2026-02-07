@@ -40,6 +40,7 @@ function DexInterface() {
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   
+  const [activeTab, setActiveTab] = useState<'swap' | 'liquidity'>('swap');
   const [sellToken, setSellToken] = useState(TOKEN_LIST[0]);
   const [buyToken, setBuyToken] = useState(TOKEN_LIST[1]);
   const [sellAmount, setSellAmount] = useState('');
@@ -48,19 +49,21 @@ function DexInterface() {
 
   const isWrongNetwork = isConnected && chainId !== 5042002;
 
+  // Busca saldo do token (USDC ou EURC) na rede correta
   const { data: balance, isLoading, refetch } = useBalance({
     address: address,
     token: sellToken.address,
     chainId: 5042002,
   });
 
+  // Garante que o saldo atualize quando mudar o token ou a rede
   useEffect(() => {
     if (isConnected && !isWrongNetwork) {
       refetch();
     }
   }, [chainId, isConnected, sellToken, isWrongNetwork, refetch]);
 
-  // Bloqueia valores negativos no cálculo
+  // Cálculo de swap (simulado) bloqueando negativos
   useEffect(() => {
     const val = Number(sellAmount);
     if (sellAmount && !isNaN(val) && val >= 0) {
@@ -68,11 +71,10 @@ function DexInterface() {
     } else {
       setBuyAmount('');
     }
-  }, [sellAmount]);
+  }, [sellAmount, sellToken, buyToken]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Só atualiza o estado se o valor for vazio ou maior/igual a zero
     if (value === '' || Number(value) >= 0) {
       setSellAmount(value);
     }
@@ -92,6 +94,7 @@ function DexInterface() {
   return (
     <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif' }}>
       
+      {/* NAVBAR */}
       <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#00ff88' }}>
           CLEAR<span style={{color: '#fff'}}>SWAP</span>
@@ -120,44 +123,60 @@ function DexInterface() {
         </div>
       </nav>
 
-      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', marginTop: '80px', position: 'relative' }}>
+      {/* TABS (VOLTARAM) */}
+      <div style={{ marginTop: '60px', marginBottom: '20px', display: 'flex', backgroundColor: '#111', padding: '5px', borderRadius: '16px', border: '1px solid #222' }}>
+        <button 
+          onClick={() => setActiveTab('swap')}
+          style={{ padding: '10px 25px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'swap' ? '#222' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+        >Swap</button>
+        <button 
+          onClick={() => setActiveTab('liquidity')}
+          style={{ padding: '10px 25px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'liquidity' ? '#222' : 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}
+        >Liquidez</button>
+      </div>
+
+      {/* CONTEÚDO */}
+      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '28px', padding: '20px', border: '1px solid #222', position: 'relative' }}>
         
-        <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
-            <span>Você vende</span>
-            <span>Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <input 
-              type="number" 
-              min="0" 
-              placeholder="0.0" 
-              value={sellAmount} 
-              onChange={handleInputChange} 
-              style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
-            />
-            <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{sellToken.symbol} ▾</button>
-          </div>
-        </div>
+        {activeTab === 'swap' ? (
+          <>
+            <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '13px', marginBottom: '10px' }}>
+                <span>Você vende</span>
+                <span>Saldo: {isConnected ? (isLoading ? '...' : `${Number(balance?.formatted || 0).toFixed(4)}`) : '0.0'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input 
+                  type="number" min="0" placeholder="0.0" 
+                  value={sellAmount} onChange={handleInputChange} 
+                  style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
+                />
+                <button onClick={() => setShowModal('sell')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{sellToken.symbol} ▾</button>
+              </div>
+            </div>
 
-        <div style={{ textAlign: 'center', margin: '-15px 0', zIndex: 2, position: 'relative' }}>
-          <button onClick={switchTokens} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#00ff88' }}>⇅</button>
-        </div>
+            <div style={{ textAlign: 'center', margin: '-15px 0', zIndex: 2, position: 'relative' }}>
+              <button onClick={switchTokens} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#00ff88' }}>⇅</button>
+            </div>
 
-        <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222', marginBottom: '20px' }}>
-          <div style={{ color: '#888', fontSize: '13px', marginBottom: '10px' }}>Você recebe</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '60%' }} />
-            <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{buyToken.symbol} ▾</button>
-          </div>
-        </div>
+            <div style={{ backgroundColor: '#1a1a1a', padding: '16px', borderRadius: '20px', border: '1px solid #222', marginBottom: '20px' }}>
+              <div style={{ color: '#888', fontSize: '13px', marginBottom: '10px' }}>Você recebe</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input type="number" placeholder="0.0" value={buyAmount} readOnly style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '24px', outline: 'none', width: '60%' }} />
+                <button onClick={() => setShowModal('buy')} style={{ backgroundColor: '#222', padding: '8px 12px', borderRadius: '12px', border: '1px solid #333', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>{buyToken.symbol} ▾</button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>Área de Liquidez (Em breve)</div>
+        )}
 
         <ConnectKitButton.Custom>
           {({ isConnected, show }) => (
             <button 
               onClick={isWrongNetwork ? handleSwitchNetwork : (isConnected ? undefined : show)} 
               style={{ width: '100%', padding: '18px', borderRadius: '18px', border: 'none', backgroundColor: isWrongNetwork ? '#ff4444' : (isConnected ? (sellAmount ? '#00ff88' : '#222') : '#fff'), color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
-              {isWrongNetwork ? 'Rede Incorreta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
+              {isWrongNetwork ? 'Mudar para Rede Correta' : (isConnected ? (sellAmount ? 'Confirmar Swap' : 'Insira um valor') : 'Conectar Carteira')}
             </button>
           )}
         </ConnectKitButton.Custom>
