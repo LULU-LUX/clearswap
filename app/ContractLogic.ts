@@ -58,4 +58,7 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
     }
 };
 
-export const adicionarLiquidezContrato = () => {};
+// Altere a última linha para aceitar os parâmetros, mesmo que não faça nada ainda
+export const adicionarLiquidezContrato = (tokenA: string, tokenB: string, amountA: string, amountB: string) => {
+    window.alert("Função de Liquidez em desenvolvimento!");
+};
