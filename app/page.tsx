@@ -1,10 +1,15 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { WagmiConfig, createConfig, useAccount, useBalance, useSwitchChain, useChainId } from 'wagmi';
+import { WagmiConfig, createConfig, useAccount, useBalance } from 'wagmi';
 import { ConnectKitProvider, ConnectKitButton, getDefaultConfig } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// --- CONFIGURAÇÃO ARC TESTNET ---
+// ==========================================================
+// CHAMADA DO ARQUIVO 2 (LOGICA DE CONTRATOS)
+// Quando terminarmos, basta copiar o conteúdo do arquivo 2 aqui.
+import { executarSwapContrato, adicionarLiquidezContrato } from './ContractLogic';
+// ==========================================================
+
 const arcTestnet = {
   id: 5042002,
   name: 'ARC Testnet',
@@ -34,144 +39,176 @@ const TOKEN_LIST = [
 ];
 
 function DexApp() {
-  const { isConnected, address } = useAccount();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
-  
+  const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'swap' | 'pool'>('swap');
   
-  // States para Swap
-  const [sellToken, setSellToken] = useState(TOKEN_LIST[0]);
-  const [buyToken, setBuyToken] = useState(TOKEN_LIST[1]);
-  const [amount, setAmount] = useState('');
-
-  // States para Pool
   const [tokenA, setTokenA] = useState(TOKEN_LIST[0]);
   const [tokenB, setTokenB] = useState(TOKEN_LIST[1]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectingFor, setSelectingFor] = useState<'A' | 'B'>('A');
+
+  const [amount, setAmount] = useState('');
   const [amountA, setAmountA] = useState('');
   const [amountB, setAmountB] = useState('');
+  const [slippage, setSlippage] = useState('3');
+
+  const poolReserves = { A: 10000, B: 9500 }; 
 
   useEffect(() => { setMounted(true); }, []);
 
-  const isWrongNetwork = isConnected && chainId !== 5042002;
+  const { data: balA } = useBalance({ address, token: tokenA.address });
+  const { data: balB } = useBalance({ address, token: tokenB.address });
 
-  // Busca de Saldo (Polling de 4s para evitar sumiço no refresh)
-  const { data: balA, refetch: refetchA } = useBalance({ address, token: activeTab === 'swap' ? sellToken.address : tokenA.address, chainId: 5042002 });
-  const { data: balB, refetch: refetchB } = useBalance({ address, token: activeTab === 'swap' ? buyToken.address : tokenB.address, chainId: 5042002 });
+  const handleAmountChange = (val: string, setter: (v: string) => void) => {
+    if (Number(val) < 0) return;
+    setter(val);
+  };
 
-  useEffect(() => {
-    if (isConnected && address && mounted) {
-      const timer = setInterval(() => { refetchA(); refetchB(); }, 4000);
-      return () => clearInterval(timer);
-    }
-  }, [isConnected, address, sellToken, tokenA, mounted, refetchA, refetchB]);
+  const updatePoolB = (val: string) => {
+    if (Number(val) < 0) return;
+    setAmountA(val);
+    if (!val || Number(val) <= 0) { setAmountB(''); return; }
+    const ratio = poolReserves.B / poolReserves.A;
+    setAmountB((Number(val) * ratio).toFixed(4));
+  };
+
+  const updatePoolA = (val: string) => {
+    if (Number(val) < 0) return;
+    setAmountB(val);
+    if (!val || Number(val) <= 0) { setAmountA(''); return; }
+    const ratio = poolReserves.A / poolReserves.B;
+    setAmountA((Number(val) * ratio).toFixed(4));
+  };
+
+  const openModal = (target: 'A' | 'B') => {
+    setSelectingFor(target);
+    setIsModalOpen(true);
+  };
+
+  const receiveAmount = amount ? (Number(amount) * (poolReserves.B / poolReserves.A) * 0.997) : 0;
+  const minimumReceived = receiveAmount * (1 - (Number(slippage) || 0) / 100);
+
+  // FUNÇÕES QUE CHAMAM O ARQUIVO 2
+  const clicarNoBotaoSwap = () => {
+    executarSwapContrato(tokenA.address, tokenB.address, amount, slippage);
+  };
+
+  const clicarNoBotaoPool = () => {
+    adicionarLiquidezContrato(tokenA.address, tokenB.address, amountA, amountB);
+  };
 
   if (!mounted) return null;
 
   return (
-    <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'sans-serif', padding: '20px' }}>
       
-      {/* Header */}
-      <nav style={{ width: '100%', maxWidth: '1200px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#00ff88', letterSpacing: '-1px' }}>CLEARSWAP</div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {isWrongNetwork && (
-            <button onClick={() => switchChain?.({ chainId: 5042002 })} style={{ backgroundColor: '#ff4444', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>Switch to ARC</button>
-          )}
-          <ConnectKitButton />
-        </div>
+      <nav style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#00ff88' }}>CLEARSWAP <span style={{color: '#fff', fontSize: '12px'}}>PRO</span></div>
+        <ConnectKitButton />
       </nav>
 
-      {/* Tabs Switcher */}
-      <div style={{ display: 'flex', backgroundColor: '#111', padding: '4px', borderRadius: '16px', margin: '40px 0 20px 0', border: '1px solid #222' }}>
-        {['swap', 'pool'].map((tab) => (
-          <button 
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            style={{ 
-              padding: '10px 30px', borderRadius: '12px', border: 'none', 
-              backgroundColor: activeTab === tab ? '#222' : 'transparent', 
-              color: activeTab === tab ? '#00ff88' : '#888', 
-              cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' 
-            }}
-          >
-            {tab.toUpperCase()}
-          </button>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', backgroundColor: '#111', padding: '10px 20px', borderRadius: '12px', border: '1px solid #222' }}>
+        <span style={{ fontSize: '12px', color: '#888' }}>Slippage:</span>
+        {[0.5, 1, 3].map((s) => (
+          <button key={s} onClick={() => setSlippage(s.toString())} style={{ backgroundColor: slippage === s.toString() ? '#00ff88' : '#222', border: 'none', color: slippage === s.toString() ? '#000' : '#fff', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>{s}%</button>
         ))}
+        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#222', borderRadius: '8px', padding: '2px 8px', border: '1px solid #333' }}>
+          <input 
+            type="number" 
+            value={slippage} 
+            onChange={(e) => setSlippage(e.target.value)} 
+            style={{ width: '40px', background: 'none', border: 'none', color: '#00ff88', outline: 'none', textAlign: 'right', fontWeight: 'bold' }}
+          />
+          <span style={{ color: '#00ff88', fontSize: '12px', marginLeft: '2px' }}>%</span>
+        </div>
       </div>
 
-      {/* Card Principal */}
-      <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#111', borderRadius: '32px', padding: '24px', border: '1px solid #222', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+      <div style={{ display: 'flex', backgroundColor: '#111', padding: '6px', borderRadius: '16px', marginBottom: '30px', border: '1px solid #222' }}>
+        <button onClick={() => setActiveTab('swap')} style={{ padding: '12px 35px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'swap' ? '#222' : 'transparent', color: activeTab === 'swap' ? '#00ff88' : '#888', cursor: 'pointer', fontWeight: 'bold' }}>SWAP</button>
+        <button onClick={() => setActiveTab('pool')} style={{ padding: '12px 35px', borderRadius: '12px', border: 'none', backgroundColor: activeTab === 'pool' ? '#222' : 'transparent', color: activeTab === 'pool' ? '#00ff88' : '#888', cursor: 'pointer', fontWeight: 'bold' }}>POOLS</button>
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#111', borderRadius: '32px', padding: '24px', border: '1px solid #222', position: 'relative' }}>
         
         {activeTab === 'swap' ? (
-          <div id="swap-ui">
-            <div style={{ marginBottom: '10px', fontSize: '14px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Vender</span>
-              <span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
-            </div>
-            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', border: '1px solid #222', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <input type="number" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', outline: 'none', width: '60%' }} />
-                <button style={{ backgroundColor: '#333', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', fontWeight: 'bold' }}>{sellToken.symbol}</button>
+          <>
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '8px', border: '1px solid #222' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
+                <span>Você vende</span><span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input type="number" min="0" placeholder="0.0" value={amount} onChange={(e) => handleAmountChange(e.target.value, setAmount)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <button onClick={() => openModal('A')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenA.symbol} ▼</button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '-18px 0', zIndex: 2, position: 'relative' }}>
-              <button onClick={() => {setSellToken(buyToken); setBuyToken(sellToken);}} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', color: '#00ff88', padding: '8px', cursor: 'pointer' }}>⇅</button>
-            </div>
-
-            <div style={{ marginTop: '10px', marginBottom: '10px', fontSize: '14px', color: '#888', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Receber (estimado)</span>
-              <span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
-            </div>
-            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', border: '1px solid #222', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <input type="text" readOnly value={amount ? (Number(amount) * 0.997).toFixed(4) : ''} placeholder="0.0" style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
-                <button style={{ backgroundColor: '#333', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '12px', fontWeight: 'bold' }}>{buyToken.symbol}</button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div id="pool-ui">
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>Adicionar Liquidez</h3>
-            <p style={{ color: '#888', fontSize: '13px', marginBottom: '20px' }}>Receba taxas de LP ao fornecer ativos para a pool.</p>
             
-            <div style={{ backgroundColor: '#1a1a1a', padding: '15px', borderRadius: '18px', border: '1px solid #222', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <input type="number" placeholder="0.0" value={amountA} onChange={(e) => setAmountA(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', outline: 'none', width: '50%' }} />
-                <span style={{ color: '#888' }}>{tokenA.symbol}</span>
+            <div style={{ textAlign: 'center', margin: '-18px 0', zIndex: 2, position: 'relative' }}>
+               <button onClick={() => {const t = tokenA; setTokenA(tokenB); setTokenB(t);}} style={{ backgroundColor: '#111', border: '4px solid #050505', borderRadius: '12px', color: '#00ff88', cursor: 'pointer', padding: '8px', fontSize: '18px' }}>⇅</button>
+            </div>
+
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '20px', border: '1px solid #222', marginTop: '10px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
+                <span>Você recebe</span><span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input type="text" readOnly value={receiveAmount.toFixed(4)} style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', margin: '5px', color: '#888' }}>+</div>
-
-            <div style={{ backgroundColor: '#1a1a1a', padding: '15px', borderRadius: '18px', border: '1px solid #222', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <input type="number" placeholder="0.0" value={amountB} onChange={(e) => setAmountB(e.target.value)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', outline: 'none', width: '50%' }} />
-                <span style={{ color: '#888' }}>{tokenB.symbol}</span>
-              </div>
-            </div>
+            <ConnectKitButton.Custom>
+              {({ isConnected, show }) => {
+                return (
+                  <button 
+                    onClick={() => {
+                      if (!isConnected) {
+                        show?.(); 
+                      } else {
+                        clicarNoBotaoSwap(); 
+                      }
+                    }} 
+                    disabled={isConnected && !amount} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '20px', 
+                      borderRadius: '20px', 
+                      border: 'none', 
+                      backgroundColor: (!isConnected || amount) ? '#00ff88' : '#222', 
+                      color: '#000', 
+                      fontWeight: '900', 
+                      fontSize: '16px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {!isConnected ? 'CONECTAR CARTEIRA' : 'SWAP'}
+                  </button>
+                );
+              }}
+            </ConnectKitButton.Custom>
+          </>
+        ) : (
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ margin: '0 0 5px 0', color: '#00ff88' }}>Pool de Liquidez V2</h3>
+            {/* ... Campos de Pool ... */}
+            <ConnectKitButton.Custom>
+              {({ isConnected, show }) => (
+                <button onClick={!isConnected ? show : clicarNoBotaoPool} style={{ width: '100%', padding: '20px', borderRadius: '20px', border: 'none', marginTop: '20px', backgroundColor: '#00ff88', color: '#000', fontWeight: '900', fontSize: '16px', cursor: 'pointer' }}>
+                  {!isConnected ? 'CONECTAR CARTEIRA' : 'ADICIONAR LIQUIDEZ'}
+                </button>
+              )}
+            </ConnectKitButton.Custom>
           </div>
         )}
 
-        <button 
-          disabled={!isConnected}
-          style={{ 
-            width: '100%', padding: '20px', borderRadius: '20px', border: 'none', 
-            backgroundColor: isConnected ? '#00ff88' : '#222', 
-            color: '#000', fontWeight: '900', fontSize: '16px', cursor: 'pointer',
-            opacity: isConnected ? 1 : 0.6
-          }}
-        >
-          {isConnected ? (activeTab === 'swap' ? 'EXECUTAR SWAP' : 'SUPPLY LIQUIDITY') : 'CONECTAR CARTEIRA'}
-        </button>
-
-      </div>
-
-      {/* Footer Info */}
-      <div style={{ marginTop: '30px', color: '#444', fontSize: '12px' }}>
-        ARC Testnet ID: 5042002 | Protocolo v2 Full-Range
+        {isModalOpen && (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '32px', zIndex: 10, padding: '20px', border: '1px solid #00ff88' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}><span style={{ fontWeight: 'bold' }}>Tokens</span><button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button></div>
+            {TOKEN_LIST.map((t) => (
+              <div key={t.address} onClick={() => { if(selectingFor==='A') setTokenA(t); else setTokenB(t); setIsModalOpen(false); }} style={{ padding: '15px', borderRadius: '15px', backgroundColor: '#1a1a1a', marginBottom: '10px', cursor: 'pointer', border: '1px solid #222' }}>{t.symbol}</div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -179,12 +216,6 @@ function DexApp() {
 
 export default function App() {
   return (
-    <WagmiConfig config={config}>
-      <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider mode="dark">
-          <DexApp />
-        </ConnectKitProvider>
-      </QueryClientProvider>
-    </WagmiConfig>
+    <WagmiConfig config={config}><QueryClientProvider client={queryClient}><ConnectKitProvider mode="dark"><DexApp /></ConnectKitProvider></QueryClientProvider></WagmiConfig>
   );
 }
