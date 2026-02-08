@@ -9,18 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "connectkit": "^1.9.1",
+    "ethers": "^5.7.2",
+    "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "next": "latest",
-    "wagmi": "latest",
-    "viem": "latest",
-    "@tanstack/react-query": "latest",
-    "connectkit": "latest"
+    "viem": "^2.45.1",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
-    "typescript": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "typescript": "latest"
   }
 }
