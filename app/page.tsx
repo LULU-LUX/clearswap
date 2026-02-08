@@ -9,6 +9,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Quando terminarmos, basta copiar o conteúdo do arquivo 2 aqui.
 import { executarSwapContrato, adicionarLiquidezContrato } from './ContractLogic';
 // ==========================================================
+// CHAMADA DO ARQUIVO 3 (LOGICA DE POOLS)
+import { gerenciarLiquidez } from './PoolLogic';
 
 const arcTestnet = {
   id: 5042002,
@@ -95,7 +97,7 @@ function DexApp() {
   };
 
   const clicarNoBotaoPool = () => {
-    adicionarLiquidezContrato(tokenA.address, tokenB.address, amountA, amountB);
+  gerenciarLiquidez(tokenA.address, tokenB.address, amountA, amountB);
   };
 
   if (!mounted) return null;
@@ -189,11 +191,65 @@ function DexApp() {
           </>
         ) : (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#00ff88' }}>Pool de Liquidez V2</h3>
-            {/* ... Campos de Pool ... */}
+            <h3 style={{ margin: '0 0 15px 0', color: '#00ff88' }}>Pool de Liquidez V2</h3>
+            
+{/* INPUT TOKEN A */}
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '8px', border: '1px solid #222' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
+                <span>Quantidade {tokenA.symbol}</span><span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input 
+                  type="number" 
+                  placeholder="0.0" 
+                  value={amountA} 
+                  onChange={(e) => handleAmountChange(e.target.value, setAmountA)} 
+                  style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
+                />
+                <button onClick={() => openModal('A')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenA.symbol} ▼</button>
+              </div>
+            </div>
+
+            {/* INPUT TOKEN B */}
+            <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '10px', border: '1px solid #222' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
+                <span>Quantidade {tokenB.symbol}</span><span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <input 
+                  type="number" 
+                  placeholder="0.0" 
+                  value={amountB} 
+                  onChange={(e) => handleAmountChange(e.target.value, setAmountB)} 
+                  style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
+                />
+                <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>
+              </div>
+            </div>
             <ConnectKitButton.Custom>
               {({ isConnected, show }) => (
-                <button onClick={!isConnected ? show : clicarNoBotaoPool} style={{ width: '100%', padding: '20px', borderRadius: '20px', border: 'none', marginTop: '20px', backgroundColor: '#00ff88', color: '#000', fontWeight: '900', fontSize: '16px', cursor: 'pointer' }}>
+                <button 
+                  onClick={() => {
+                    if (!isConnected) {
+                      show?.(); 
+                    } else {
+                      clicarNoBotaoPool(); 
+                    }
+                  }} 
+                  disabled={isConnected && (!amountA || !amountB)} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '20px', 
+                    borderRadius: '20px', 
+                    border: 'none', 
+                    marginTop: '20px',
+                    backgroundColor: (isConnected && (!amountA || !amountB)) ? '#222' : '#00ff88', 
+                    color: '#000', 
+                    fontWeight: '900', 
+                    fontSize: '16px', 
+                    cursor: (isConnected && (!amountA || !amountB)) ? 'not-allowed' : 'pointer' 
+                  }}
+                >
                   {!isConnected ? 'CONECTAR CARTEIRA' : 'ADICIONAR LIQUIDEZ'}
                 </button>
               )}
