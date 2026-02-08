@@ -54,6 +54,7 @@ function DexApp() {
   const [amountA, setAmountA] = useState('');
   const [amountB, setAmountB] = useState('');
   const [slippage, setSlippage] = useState('3');
+  const [showPreview, setShowPreview] = useState(false); 
 
   const poolReserves = { A: 10000, B: 9500 }; 
 
@@ -193,7 +194,6 @@ function DexApp() {
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{ margin: '0 0 15px 0', color: '#00ff88' }}>Pool de Liquidez V2</h3>
             
-{/* INPUT TOKEN A */}
             <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '8px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
                 <span>Quantidade {tokenA.symbol}</span><span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
@@ -203,14 +203,13 @@ function DexApp() {
                   type="number" 
                   placeholder="0.0" 
                   value={amountA} 
-                  onChange={(e) => handleAmountChange(e.target.value, setAmountA)} 
+                  onChange={(e) => updatePoolB(e.target.value)} 
                   style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
                 />
                 <button onClick={() => openModal('A')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenA.symbol} ▼</button>
               </div>
             </div>
 
-            {/* INPUT TOKEN B */}
             <div style={{ backgroundColor: '#1a1a1a', padding: '20px', borderRadius: '20px', marginBottom: '10px', border: '1px solid #222' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginBottom: '10px' }}>
                 <span>Quantidade {tokenB.symbol}</span><span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
@@ -220,22 +219,17 @@ function DexApp() {
                   type="number" 
                   placeholder="0.0" 
                   value={amountB} 
-                  onChange={(e) => handleAmountChange(e.target.value, setAmountB)} 
+                  onChange={(e) => updatePoolA(e.target.value)} 
                   style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
                 />
                 <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>
               </div>
             </div>
+
             <ConnectKitButton.Custom>
               {({ isConnected, show }) => (
                 <button 
-                  onClick={() => {
-                    if (!isConnected) {
-                      show?.(); 
-                    } else {
-                      clicarNoBotaoPool(); 
-                    }
-                  }} 
+                  onClick={() => !isConnected ? show?.() : setShowPreview(true)} 
                   disabled={isConnected && (!amountA || !amountB)} 
                   style={{ 
                     width: '100%', 
@@ -254,8 +248,31 @@ function DexApp() {
                 </button>
               )}
             </ConnectKitButton.Custom>
+
+            {showPreview && (
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '32px', zIndex: 20, padding: '24px', border: '1px solid #00ff88', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ color: '#00ff88', marginTop: 0 }}>Confirmar Liquidez</h3>
+                <div style={{ flex: 1, backgroundColor: '#1a1a1a', borderRadius: '16px', padding: '15px', marginBottom: '20px' }}>
+                  <p style={{ color: '#888', fontSize: '12px', margin: '0' }}>Você deposita:</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', margin: '10px 0' }}>
+                    <span>{amountA} {tokenA.symbol}</span>
+                    <span>+</span>
+                    <span>{amountB} {tokenB.symbol}</span>
+                  </div>
+                  <hr style={{ border: '0.5px solid #333', margin: '15px 0' }} />
+                  <p style={{ color: '#888', fontSize: '12px', margin: '0' }}>LP Tokens Estimados:</p>
+                  <div style={{ fontSize: '22px', color: '#00ff88', fontWeight: 'bold' }}>
+                    {(Math.sqrt(Number(amountA) * Number(amountB)) || 0).toFixed(6)} LP
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setShowPreview(false)} style={{ flex: 1, padding: '15px', borderRadius: '12px', border: '1px solid #444', backgroundColor: 'transparent', color: '#fff', cursor: 'pointer' }}>Voltar</button>
+                  <button onClick={() => { setShowPreview(false); clicarNoBotaoPool(); }} style={{ flex: 2, padding: '15px', borderRadius: '12px', border: 'none', backgroundColor: '#00ff88', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar</button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        )}  
 
         {isModalOpen && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#111', borderRadius: '32px', zIndex: 10, padding: '20px', border: '1px solid #00ff88' }}>
