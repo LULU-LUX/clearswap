@@ -1,9 +1,11 @@
 import { ethers } from 'ethers';
 
-const ROUTER_ADDRESS = "0x0E00009d00d1000069ed00A908e00081F5006008";
+// O SEU NOVO ENDEREÇO DO ROUTER
+const ROUTER_ADDRESS = "0x0624FB5d1b8F50B4ad11Bcae7C5AbFdf8233076e";
 
+// ABI Simplificada para o SEU SimpleRouter
 const ROUTER_ABI = [
-    "function mint(tuple(address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline)) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)"
+    "function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, address to, uint deadline) external returns (uint amountA, uint amountB)"
 ];
 
 const ERC20_ABI = [
@@ -17,58 +19,45 @@ export const gerenciarLiquidez = async (tokenA: string, tokenB: string, amountA:
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
         const userAddress = await signer.getAddress();
+        
         const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
 
-        // Configuração de Gás baseada no documento da ARC
-        // Mínimo é 160 Gwei, vamos usar 200 para garantir que passe rápido
+        // Preço de Gás da Arc (conforme o documento que você enviou)
         const gasPrice = ethers.utils.parseUnits('200', 'gwei');
 
-        const [token0, token1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
-        const [amt0, amt1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [amountA, amountB] : [amountB, amountA];
+        // Na ARC, USDC e EURC usam 18 decimais
+        const vA = ethers.utils.parseUnits(amountA, 18);
+        const vB = ethers.utils.parseUnits(amountB, 18);
 
-        const c0 = new ethers.Contract(token0, ERC20_ABI, signer);
-        const c1 = new ethers.Contract(token1, ERC20_ABI, signer);
+        const cA = new ethers.Contract(tokenA, ERC20_ABI, signer);
+        const cB = new ethers.Contract(tokenB, ERC20_ABI, signer);
 
-        // Confirmado pelo doc: USDC e tokens na ARC usam 18 decimais
-        const v0 = ethers.utils.parseUnits(amt0, 18);
-        const v1 = ethers.utils.parseUnits(amt1, 18);
-
-        window.alert("Passo 1: Aprovando Tokens com Gás da ARC...");
-        
-        // Aplicando o gasPrice manual nas aprovações
-        const txA = await c0.approve(ROUTER_ADDRESS, v0, { gasPrice });
+        window.alert("Passo 1: Autorizando o uso dos tokens no seu Router...");
+        const txA = await cA.approve(ROUTER_ADDRESS, vA, { gasPrice });
         await txA.wait();
-        const txB = await c1.approve(ROUTER_ADDRESS, v1, { gasPrice });
+        const txB = await cB.approve(ROUTER_ADDRESS, vB, { gasPrice });
         await txB.wait();
 
-        const params = {
-            token0: token0,
-            token1: token1,
-            fee: 3000, // Testando com 0.3% primeiro
-            tickLower: -887220, 
-            tickUpper: 887220,
-            amount0Desired: v0,
-            amount1Desired: v1,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: userAddress,
-            deadline: Math.floor(Date.now() / 1000) + 1200
-        };
-
-        window.alert("Passo 2: Enviando Mint (200 Gwei)...");
+        window.alert("Passo 2: Enviando para a sua própria Pool...");
         
-        const tx = await router.mint(params, { 
-            gasPrice,
-            gasLimit: 1000000 // Limite alto para garantir
-        });
+        const deadline = Math.floor(Date.now() / 1000) + 600;
 
-        console.log("TX enviada com 200 Gwei:", tx.hash);
+        const tx = await router.addLiquidity(
+            tokenA,
+            tokenB,
+            vA,
+            vB,
+            userAddress,
+            deadline,
+            { gasPrice, gasLimit: 300000 }
+        );
+
+        console.log("Sucesso na sua DEX! Hash:", tx.hash);
         await tx.wait();
-        window.alert("✅ SUCESSO! Liquidez adicionada na Arc Testnet.");
+        window.alert("✅ PARABÉNS! Liquidez enviada para o SEU contrato!");
 
     } catch (e: any) {
-        console.error("Erro na transação:", e);
-        const msg = e.reason || e.message;
-        window.alert("Falha na ARC: " + msg);
+        console.error(e);
+        window.alert("Erro no seu Router: " + (e.reason || e.message));
     }
 };
