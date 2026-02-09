@@ -71,13 +71,13 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
             await txB.wait();
         }
 
-        // 3. ADICIONAR LIQUIDEZ
-        const deadline = Math.floor(Date.now() / 1000) + 600;
+        // 3. ADICIONAR LIQUIDEZ (Ajustado para evitar erro de RPC)
+        const deadline = Math.floor(Date.now() / 1000) + 3600; 
         const tx = await router.addLiquidity(
             tokenA, tokenB, valA, valB, userAddress, deadline,
             {
-                gasPrice: ethers.utils.parseUnits('200', 'gwei'),
-                gasLimit: 500000
+                gasPrice: ethers.utils.parseUnits('250', 'gwei'),
+                gasLimit: 1000000
             }
         );
 
