@@ -10,7 +10,7 @@ const ERC20_ABI = [
     "function decimals() public view returns (uint8)"
 ];
 
-const ROUTER_ADDRESS = "0x6178b6b228316203239740A05ba77b78a1e8Cb18";
+const ROUTER_ADDRESS = "0xb2ED6c41e3fa7F8e8970deeCcd2320D594337047";
 
 export const executarSwapContrato = async (tokenA: string, tokenB: string, amount: string, slippage: string) => {
     try {
