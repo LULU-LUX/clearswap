@@ -24,8 +24,8 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
         const tokenContrato = new ethers.Contract(tokenA, ERC20_ABI, signer);
         const routerContrato = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
         
-        const decimals = await tokenContrato.decimals().catch(() => 18);
-        const valorWei = ethers.utils.parseUnits(amount || "0", decimals);
+        // Na ARC Testnet, USDC e EURC usam 18 decimais, não 6.
+        const valorWei = ethers.utils.parseUnits(amount || "0", 18);
 
         const allowance = await tokenContrato.allowance(userAddress, ROUTER_ADDRESS);
         if (allowance.lt(valorWei)) {
