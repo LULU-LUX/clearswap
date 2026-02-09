@@ -82,4 +82,4 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
         window.alert("Erro: " + (e.reason || e.message));
         return false;
     }
-};
+};  // build force 1

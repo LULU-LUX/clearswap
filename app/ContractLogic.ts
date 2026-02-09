@@ -55,4 +55,4 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
     }
 };
 
-export const adicionarLiquidezContrato = async () => {};
+export const adicionarLiquidezContrato = async () => {};  // build force 1 
