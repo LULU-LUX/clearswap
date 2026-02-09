@@ -38,16 +38,43 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
         const userAddress = await signer.getAddress();
-        const gasPrice = ethers.utils.parseUnits('200', 'gwei');
 
+        // ABI MÍNIMA PARA O APPROVE
+        const ERC20_ABI = [
+            "function approve(address spender, uint256 amount) public returns (bool)",
+            "function allowance(address owner, address spender) public view returns (uint256)"
+        ];
+
+        const contractA = new ethers.Contract(tokenA, ERC20_ABI, signer);
+        const contractB = new ethers.Contract(tokenB, ERC20_ABI, signer);
         const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
-        const deadline = Math.floor(Date.now() / 1000) + 600;
 
+        const valA = ethers.utils.parseUnits(amountA, 18);
+        const valB = ethers.utils.parseUnits(amountB, 18);
+
+        // 1. APROVAR TOKEN A
+        console.log("Aprovando Token A...");
+        const allowanceA = await contractA.allowance(userAddress, ROUTER_ADDRESS);
+        if (allowanceA.lt(valA)) {
+            const txA = await contractA.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256);
+            await txA.wait();
+        }
+
+        // 2. APROVAR TOKEN B
+        console.log("Aprovando Token B...");
+        const allowanceB = await contractB.allowance(userAddress, ROUTER_ADDRESS);
+        if (allowanceB.lt(valB)) {
+            const txB = await contractB.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256);
+            await txB.wait();
+        }
+
+        // 3. ADICIONAR LIQUIDEZ
+        const deadline = Math.floor(Date.now() / 1000) + 600;
         const tx = await router.addLiquidity(
             tokenA,
             tokenB,
-            ethers.utils.parseUnits(amountA, 18),
-            ethers.utils.parseUnits(amountB, 18),
+            valA,
+            valB,
             userAddress,
             deadline,
             {
@@ -57,9 +84,11 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
         );
 
         await tx.wait();
+        window.alert("Liquidez adicionada com sucesso!");
         return true;
-    } catch (e) {
+    } catch (e: any) {
         console.error(e);
+        window.alert("Erro: " + (e.reason || e.message));
         return false;
     }
 };
