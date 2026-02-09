@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-const ROUTER_ADDRESS = "0x9F602BAC5F51fB5B6f54a621B0BF33d5606c1E97";
+const ROUTER_ADDRESS = "0xeac628965177a5D26d9F0c31090B95BE07aE0F67";
 
 const ROUTER_ABI = [
     "function consultarSaida(address tokenIn, address tokenOut, uint amountIn) external view returns (uint)",
