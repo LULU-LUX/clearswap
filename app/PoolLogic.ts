@@ -2,10 +2,8 @@ import { ethers } from 'ethers';
 
 const ROUTER_ADDRESS = "0x0E00009d00d1000069ed00A908e00081F5006008";
 
-// ABI focada no que o SwapRouter02 da Synthra realmente usa
 const ROUTER_ABI = [
-    "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to) external payable returns (uint256 amountOut)",
-    "function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)"
+    "function mint(tuple(address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline)) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)"
 ];
 
 const ERC20_ABI = [
@@ -22,49 +20,41 @@ export const gerenciarLiquidez = async (tokenA: string, tokenB: string, amountA:
         const userAddress = await signer.getAddress();
         const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
 
-        // 1. Pegar decimais dinamicamente (para não enviar 1000000 errado de novo)
-        const contratoA = new ethers.Contract(tokenA, ERC20_ABI, signer);
-        const contratoB = new ethers.Contract(tokenB, ERC20_ABI, signer);
-        
-        const [decA, decB] = await Promise.all([
-            contratoA.decimals().catch(() => 18),
-            contratoB.decimals().catch(() => 18)
-        ]);
+        // Organizar endereços (Token0 sempre deve ser o menor endereço)
+        const [token0, token1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
+        const [amount0Raw, amount1Raw] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [amountA, amountB] : [amountB, amountA];
 
-        const vA = ethers.utils.parseUnits(amountA, decA);
-        const vB = ethers.utils.parseUnits(amountB, decB);
+        const c0 = new ethers.Contract(token0, ERC20_ABI, signer);
+        const c1 = new ethers.Contract(token1, ERC20_ABI, signer);
 
-        // 2. Aprovação EXATA
-        window.alert("Aprovando tokens...");
-        const txAppA = await contratoA.approve(ROUTER_ADDRESS, vA);
-        await txAppA.wait();
-        const txAppB = await contratoB.approve(ROUTER_ADDRESS, vB);
-        await txAppB.wait();
+        const v0 = ethers.utils.parseUnits(amount0Raw, 18);
+        const v1 = ethers.utils.parseUnits(amount1Raw, 18);
 
-        const deadline = Math.floor(Date.now() / 1000) + 1200;
+        window.alert("Aprovando tokens para a Synthra...");
+        await (await c0.approve(ROUTER_ADDRESS, v0)).wait();
+        await (await c1.approve(ROUTER_ADDRESS, v1)).wait();
 
-        // 3. Tenta Adicionar Liquidez
-        // Se a Pool da Synthra for V3, esta função V2 pode estar desabilitada no Router deles.
-        window.alert("Enviando Transação...");
-        const tx = await router.addLiquidity(
-            tokenA, 
-            tokenB, 
-            vA, 
-            vB, 
-            0, 
-            0, 
-            userAddress, 
-            deadline,
-            { gasLimit: 500000 } // Aumentado para cobrir a lógica complexa da Synthra
-        );
+        const params = {
+            token0: token0,
+            token1: token1,
+            fee: 3000, // Taxa padrão de 0.3%
+            tickLower: -887220, // Faixa ampla (Full Range)
+            tickUpper: 887220,
+            amount0Desired: v0,
+            amount1Desired: v1,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: userAddress,
+            deadline: Math.floor(Date.now() / 1000) + 1200
+        };
 
-        console.log("Hash:", tx.hash);
+        window.alert("Criando posição na Pool V3...");
+        const tx = await router.mint(params, { gasLimit: 3000000 });
         await tx.wait();
-        window.alert("✅ Liquidez Adicionada!");
+        window.alert("✅ Liquidez adicionada com sucesso!");
 
     } catch (e: any) {
         console.error(e);
-        // Captura o erro detalhado da simulação
-        window.alert("Erro: " + (e.reason || e.message || "Verifique o console"));
+        window.alert("Erro Synthra: " + (e.reason || e.message));
     }
 };
