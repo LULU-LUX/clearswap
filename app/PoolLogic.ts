@@ -1,63 +1,28 @@
-import { ethers } from 'ethers';
+// Substitua o endereço pelo NOVO que você acabou de gerar no Passo 2
+const ROUTER_ADDRESS = "COLE_AQUI_O_ENDERECO_DO_ROUTER_V2";
 
-// O SEU NOVO ENDEREÇO DO ROUTER
-const ROUTER_ADDRESS = "0x0624FB5d1b8F50B4ad11Bcae7C5AbFdf8233076e";
-
-// ABI Simplificada para o SEU SimpleRouter
 const ROUTER_ABI = [
-    "function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, address to, uint deadline) external returns (uint amountA, uint amountB)"
+    "function consultarSaida(address tokenIn, address tokenOut, uint amountIn) external view returns (uint)",
+    "function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, address to, uint deadline) external returns (uint, uint)"
 ];
 
-const ERC20_ABI = [
-    "function approve(address spender, uint256 amount) public returns (bool)",
-    "function decimals() public view returns (uint8)"
-];
-
-export const gerenciarLiquidez = async (tokenA: string, tokenB: string, amountA: string, amountB: string) => {
+// Esta função você chama no "onChange" do seu input de Token A
+export const obterPrecoSimulado = async (amountA: string, tokenA: string, tokenB: string) => {
+    if (!amountA || amountA === "0") return "0";
+    
     try {
         const { ethereum } = window as any;
         const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const userAddress = await signer.getAddress();
+        const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, provider);
+
+        const valorEntrada = ethers.utils.parseUnits(amountA, 18);
         
-        const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
-
-        // Preço de Gás da Arc (conforme o documento que você enviou)
-        const gasPrice = ethers.utils.parseUnits('200', 'gwei');
-
-        // Na ARC, USDC e EURC usam 18 decimais
-        const vA = ethers.utils.parseUnits(amountA, 18);
-        const vB = ethers.utils.parseUnits(amountB, 18);
-
-        const cA = new ethers.Contract(tokenA, ERC20_ABI, signer);
-        const cB = new ethers.Contract(tokenB, ERC20_ABI, signer);
-
-        window.alert("Passo 1: Autorizando o uso dos tokens no seu Router...");
-        const txA = await cA.approve(ROUTER_ADDRESS, vA, { gasPrice });
-        await txA.wait();
-        const txB = await cB.approve(ROUTER_ADDRESS, vB, { gasPrice });
-        await txB.wait();
-
-        window.alert("Passo 2: Enviando para a sua própria Pool...");
+        // O contrato faz a conta x*y=k para nós!
+        const valorSaida = await router.consultarSaida(tokenA, tokenB, valorEntrada);
         
-        const deadline = Math.floor(Date.now() / 1000) + 600;
-
-        const tx = await router.addLiquidity(
-            tokenA,
-            tokenB,
-            vA,
-            vB,
-            userAddress,
-            deadline,
-            { gasPrice, gasLimit: 300000 }
-        );
-
-        console.log("Sucesso na sua DEX! Hash:", tx.hash);
-        await tx.wait();
-        window.alert("✅ PARABÉNS! Liquidez enviada para o SEU contrato!");
-
-    } catch (e: any) {
-        console.error(e);
-        window.alert("Erro no seu Router: " + (e.reason || e.message));
+        return ethers.utils.formatUnits(valorSaida, 18);
+    } catch (e) {
+        console.log("Pool ainda vazia ou erro:", e);
+        return amountA; // Se a pool for nova, sugere 1:1
     }
 };
