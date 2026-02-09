@@ -29,7 +29,11 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
 
         const allowance = await tokenContrato.allowance(userAddress, ROUTER_ADDRESS);
         if (allowance.lt(valorWei)) {
-            const tx = await tokenContrato.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256);
+            // Adicionado Gwei e Gas aqui para não travar a permissão
+            const tx = await tokenContrato.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256, {
+                gasPrice: ethers.utils.parseUnits('200', 'gwei'),
+                gasLimit: 100000
+            });
             await tx.wait();
         }
 
