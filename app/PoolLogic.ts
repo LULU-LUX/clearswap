@@ -50,16 +50,23 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
         const valA = ethers.utils.parseUnits(amountA, decA);
         const valB = ethers.utils.parseUnits(amountB, decB);
 
-        // 1. APROVAR TOKEN A
+// 1. APROVAR TOKEN A
         const allowanceA = await contractA.allowance(userAddress, ROUTER_ADDRESS);
+        console.log("Permissão Token A:", allowanceA.toString());
+        
+        // Mudança: Se o valor for menor que o necessário ou se quisermos garantir, aprovamos.
         if (allowanceA.lt(valA)) {
+            console.log("Solicitando aprovação para Token A...");
             const txA = await contractA.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256);
             await txA.wait();
         }
 
         // 2. APROVAR TOKEN B
         const allowanceB = await contractB.allowance(userAddress, ROUTER_ADDRESS);
+        console.log("Permissão Token B:", allowanceB.toString());
+
         if (allowanceB.lt(valB)) {
+            console.log("Solicitando aprovação para Token B...");
             const txB = await contractB.approve(ROUTER_ADDRESS, ethers.constants.MaxUint256);
             await txB.wait();
         }
