@@ -37,7 +37,17 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
         const deadline = Math.floor(Date.now() / 1000) + 1200;
 
         // Nota: Certifique-se que seu contrato 0xa504 possui esta função
-        const txSwap = await routerContrato.swapExactTokensForTokens(valorWei, 0, path, userAddress, deadline, { gasLimit: 300000 });
+        const txSwap = await routerContrato.swapExactTokensForTokens(
+            valorWei,
+            0,
+            path,
+            userAddress,
+            deadline,
+            {
+                gasLimit: 500000,
+                gasPrice: ethers.utils.parseUnits('200', 'gwei')
+            }
+        );
         await txSwap.wait();
         window.alert("Swap realizado!");
     } catch (e: any) { window.alert("Erro no Swap: " + e.message); }

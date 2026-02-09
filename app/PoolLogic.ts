@@ -50,7 +50,10 @@ export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA:
             ethers.utils.parseUnits(amountB, 18),
             userAddress,
             deadline,
-            { gasPrice, gasLimit: 500000 }
+            {
+                gasPrice: ethers.utils.parseUnits('200', 'gwei'),
+                gasLimit: 800000
+            }
         );
 
         await tx.wait();
