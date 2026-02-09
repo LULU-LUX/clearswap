@@ -131,9 +131,9 @@ function DexApp() {
         ))}
         <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#222', borderRadius: '8px', padding: '2px 8px', border: '1px solid #333' }}>
           <input 
-            type="number" 
+            type="text" 
             value={slippage} 
-            onChange={(e) => setSlippage(e.target.value)} 
+            onChange={(e) => setSlippage(e.target.value.replace(',', '.'))} 
             style={{ width: '40px', background: 'none', border: 'none', color: '#00ff88', outline: 'none', textAlign: 'right', fontWeight: 'bold' }}
           />
           <span style={{ color: '#00ff88', fontSize: '12px', marginLeft: '2px' }}>%</span>
@@ -213,10 +213,10 @@ function DexApp() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input 
-                  type="number" 
+                  type="text"
                   placeholder="0.0" 
                   value={amountA} 
-                  onChange={(e) => updatePoolB(e.target.value)} 
+                  onChange={(e) => updatePoolB(e.target.value.replace(',', '.'))} 
                   style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
                 />
                 <button onClick={() => openModal('A')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenA.symbol} ▼</button>
@@ -229,10 +229,10 @@ function DexApp() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <input 
-                  type="number" 
+                  type="text" 
                   placeholder="0.0" 
                   value={amountB} 
-                  onChange={(e) => updatePoolA(e.target.value)} 
+                  onChange={(e) => updatePoolA(e.target.value.replace(',', '.'))}
                   style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', outline: 'none', width: '60%' }} 
                 />
                 <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>

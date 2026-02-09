@@ -26,7 +26,7 @@ export const calcularValorAutomatico = async (quantidade: string, tokenA: string
         const valorEntrada = ethers.utils.parseUnits(quantidade, decimalsA);
         const valorSaida = await router.consultarSaida(tokenA, tokenB, valorEntrada);
         
-        return ethers.utils.formatUnits(valorSaida, decimalsA);
+        return ethers.utils.formatUnits(valorSaida, decimalsA).replace(',', '.');
     } catch (e) {
         return quantidade; 
     }
