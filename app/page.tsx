@@ -68,19 +68,21 @@ function DexApp() {
   };
 
   const updatePoolB = async (val: string) => {
-    if (Number(val) < 0) return;
-    setAmountA(val);
-    if (!val || Number(val) <= 0) { setAmountB(''); return; }
-    const resultado = await calcularValorAutomatico(val, tokenA.address, tokenB.address);
-    setAmountB(resultado);
+    const formatado = val.replace(',', '.'); // Troca vírgula por ponto
+    if (Number(formatado) < 0) return;
+    setAmountA(formatado);
+    if (!formatado || Number(formatado) <= 0) { setAmountB(''); return; }
+    const resultado = await calcularValorAutomatico(formatado, tokenA.address, tokenB.address);
+    setAmountB(resultado.replace(',', '.')); // Garante ponto no resultado
   };
 
   const updatePoolA = async (val: string) => {
-    if (Number(val) < 0) return;
-    setAmountB(val);
-    if (!val || Number(val) <= 0) { setAmountA(''); return; }
-    const resultado = await calcularValorAutomatico(val, tokenB.address, tokenA.address);
-    setAmountA(resultado);
+    const formatado = val.replace(',', '.'); // Troca vírgula por ponto
+    if (Number(formatado) < 0) return;
+    setAmountB(formatado);
+    if (!formatado || Number(formatado) <= 0) { setAmountA(''); return; }
+    const resultado = await calcularValorAutomatico(formatado, tokenB.address, tokenA.address);
+    setAmountA(resultado.replace(',', '.')); // Garante ponto no resultado
   };
 
   useEffect(() => {
