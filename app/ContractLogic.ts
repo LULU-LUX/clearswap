@@ -12,7 +12,7 @@ const ERC20_ABI = [
 ];
 
 // USANDO O MESMO ENDEREÇO DO POOLLOGIC
-const ROUTER_ADDRESS = "0xa5043ad790d4E41e09C9c04BCD44Ddcf853D101c";
+const ROUTER_ADDRESS = "0x7476A4db27255C51344ae438d2975E301cd28CE7";
 
 export const executarSwapContrato = async (tokenA: string, tokenB: string, amount: string, slippage: string) => {
     try {

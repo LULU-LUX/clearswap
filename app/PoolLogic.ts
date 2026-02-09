@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 // SEU NOVO ROUTER INTELIGENTE
-const ROUTER_ADDRESS = "0xa5043ad790d4E41e09C9c04BCD44Ddcf853D101c";
+const ROUTER_ADDRESS = "0x7476A4db27255C51344ae438d2975E301cd28CE7";
 
 const ROUTER_ABI = [
     "function consultarSaida(address tokenIn, address tokenOut, uint amountIn) external view returns (uint)",
