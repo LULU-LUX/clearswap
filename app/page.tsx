@@ -152,7 +152,7 @@ function DexApp() {
                 <span>Você vende</span><span>Saldo: {balA?.formatted.slice(0,6) || '0.00'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <input type="number" min="0" placeholder="0.0" value={amount} onChange={(e) => handleAmountChange(e.target.value, setAmount)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <input type="text" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value.replace(',', '.'))} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '28px', outline: 'none', width: '60%' }} />
                 <button onClick={() => openModal('A')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenA.symbol} ▼</button>
               </div>
             </div>
@@ -166,7 +166,7 @@ function DexApp() {
                 <span>Você recebe</span><span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <input type="text" readOnly value={Number(receiveAmount).toFixed(6)} style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <input type="text" readOnly value={receiveAmount === '0' ? '0.0' : Number(receiveAmount).toLocaleString('en-US', {minimumFractionDigits: 6, maximumFractionDigits: 6})} style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
                 <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>
               </div>
             </div>

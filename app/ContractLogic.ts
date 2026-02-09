@@ -43,8 +43,8 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
             userAddress,
             deadline,
             {
-                gasLimit: 500000,
-                gasPrice: ethers.utils.parseUnits('200', 'gwei')
+                gasPrice: ethers.utils.parseUnits('250', 'gwei'),
+                gasLimit: 1000000
             }
         );
         await txSwap.wait();
