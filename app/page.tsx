@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { executarSwapContrato, adicionarLiquidezContrato } from './ContractLogic';
 // ==========================================================
 // CHAMADA DO ARQUIVO 3 (LOGICA DE POOLS)
-import { gerenciarLiquidez, calcularValorAutomatico } from './PoolLogic';
+import { adicionarLiquidez, calcularValorAutomatico } from './PoolLogic';
 
 const arcTestnet = {
   id: 5042002,
@@ -107,7 +107,7 @@ function DexApp() {
   };
 
   const clicarNoBotaoPool = () => {
-  gerenciarLiquidez(tokenA.address, tokenB.address, amountA, amountB);
+    adicionarLiquidez(tokenA.address, tokenB.address, amountA, amountB);
   };
 
   if (!mounted) return null;
