@@ -68,21 +68,23 @@ function DexApp() {
   };
 
   const updatePoolB = async (val: string) => {
-    const formatado = val.replace(',', '.'); // Troca vírgula por ponto
+    const formatado = val.replace(',', '.'); 
     if (Number(formatado) < 0) return;
     setAmountA(formatado);
     if (!formatado || Number(formatado) <= 0) { setAmountB(''); return; }
     const resultado = await calcularValorAutomatico(formatado, tokenA.address, tokenB.address);
-    setAmountB(resultado.replace(',', '.')); // Garante ponto no resultado
+    // A mágica está aqui: .replace(',', '.') no final
+    setAmountB(resultado.toString().replace(',', '.')); 
   };
 
   const updatePoolA = async (val: string) => {
-    const formatado = val.replace(',', '.'); // Troca vírgula por ponto
+    const formatado = val.replace(',', '.'); 
     if (Number(formatado) < 0) return;
     setAmountB(formatado);
     if (!formatado || Number(formatado) <= 0) { setAmountA(''); return; }
     const resultado = await calcularValorAutomatico(formatado, tokenB.address, tokenA.address);
-    setAmountA(resultado.replace(',', '.')); // Garante ponto no resultado
+    // A mágica está aqui também
+    setAmountA(resultado.toString().replace(',', '.')); 
   };
 
   useEffect(() => {
