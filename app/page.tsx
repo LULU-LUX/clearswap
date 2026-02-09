@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { executarSwapContrato, adicionarLiquidezContrato } from './ContractLogic';
 // ==========================================================
 // CHAMADA DO ARQUIVO 3 (LOGICA DE POOLS)
-import { gerenciarLiquidez } from './PoolLogic';
+import { gerenciarLiquidez, calcularValorAutomatico } from './PoolLogic';
 
 const arcTestnet = {
   id: 5042002,
@@ -55,8 +55,7 @@ function DexApp() {
   const [amountB, setAmountB] = useState('');
   const [slippage, setSlippage] = useState('3');
   const [showPreview, setShowPreview] = useState(false); 
-
-  const poolReserves = { A: 10000, B: 9500 }; 
+  const [receiveAmount, setReceiveAmount] = useState('0');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -68,29 +67,39 @@ function DexApp() {
     setter(val);
   };
 
-  const updatePoolB = (val: string) => {
+  const updatePoolB = async (val: string) => {
     if (Number(val) < 0) return;
     setAmountA(val);
     if (!val || Number(val) <= 0) { setAmountB(''); return; }
-    const ratio = poolReserves.B / poolReserves.A;
-    setAmountB((Number(val) * ratio).toFixed(4));
+    const resultado = await calcularValorAutomatico(val, tokenA.address, tokenB.address);
+    setAmountB(resultado);
   };
 
-  const updatePoolA = (val: string) => {
+  const updatePoolA = async (val: string) => {
     if (Number(val) < 0) return;
     setAmountB(val);
     if (!val || Number(val) <= 0) { setAmountA(''); return; }
-    const ratio = poolReserves.A / poolReserves.B;
-    setAmountA((Number(val) * ratio).toFixed(4));
+    const resultado = await calcularValorAutomatico(val, tokenB.address, tokenA.address);
+    setAmountA(resultado);
   };
+
+  useEffect(() => {
+    const atualizarSwap = async () => {
+      if (activeTab === 'swap' && amount && Number(amount) > 0) {
+        const res = await calcularValorAutomatico(amount, tokenA.address, tokenB.address);
+        setReceiveAmount(res);
+      } else {
+        setReceiveAmount('0');
+      }
+    };
+    atualizarSwap();
+  }, [amount, tokenA, tokenB, activeTab]);
 
   const openModal = (target: 'A' | 'B') => {
     setSelectingFor(target);
     setIsModalOpen(true);
   };
 
-  const receiveAmount = amount ? (Number(amount) * (poolReserves.B / poolReserves.A) * 0.997) : 0;
-  const minimumReceived = receiveAmount * (1 - (Number(slippage) || 0) / 100);
 
   // FUNÇÕES QUE CHAMAM O ARQUIVO 2
   const clicarNoBotaoSwap = () => {
@@ -155,7 +164,7 @@ function DexApp() {
                 <span>Você recebe</span><span>Saldo: {balB?.formatted.slice(0,6) || '0.00'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <input type="text" readOnly value={receiveAmount.toFixed(4)} style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
+                <input type="text" readOnly value={Number(receiveAmount).toFixed(6)} style={{ background: 'none', border: 'none', color: '#00ff88', fontSize: '28px', outline: 'none', width: '60%' }} />
                 <button onClick={() => openModal('B')} style={{ backgroundColor: '#222', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>{tokenB.symbol} ▼</button>
               </div>
             </div>
