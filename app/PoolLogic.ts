@@ -8,7 +8,6 @@ const ROUTER_ABI = [
 
 const ERC20_ABI = [
     "function approve(address spender, uint256 amount) public returns (bool)",
-    "function allowance(address owner, address spender) public view returns (uint256)",
     "function decimals() public view returns (uint8)"
 ];
 
@@ -20,25 +19,33 @@ export const gerenciarLiquidez = async (tokenA: string, tokenB: string, amountA:
         const userAddress = await signer.getAddress();
         const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
 
-        // Organizar endereços (Token0 sempre deve ser o menor endereço)
+        // Configuração de Gás baseada no documento da ARC
+        // Mínimo é 160 Gwei, vamos usar 200 para garantir que passe rápido
+        const gasPrice = ethers.utils.parseUnits('200', 'gwei');
+
         const [token0, token1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [tokenA, tokenB] : [tokenB, tokenA];
-        const [amount0Raw, amount1Raw] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [amountA, amountB] : [amountB, amountA];
+        const [amt0, amt1] = tokenA.toLowerCase() < tokenB.toLowerCase() ? [amountA, amountB] : [amountB, amountA];
 
         const c0 = new ethers.Contract(token0, ERC20_ABI, signer);
         const c1 = new ethers.Contract(token1, ERC20_ABI, signer);
 
-        const v0 = ethers.utils.parseUnits(amount0Raw, 18);
-        const v1 = ethers.utils.parseUnits(amount1Raw, 18);
+        // Confirmado pelo doc: USDC e tokens na ARC usam 18 decimais
+        const v0 = ethers.utils.parseUnits(amt0, 18);
+        const v1 = ethers.utils.parseUnits(amt1, 18);
 
-        window.alert("Aprovando tokens para a Synthra...");
-        await (await c0.approve(ROUTER_ADDRESS, v0)).wait();
-        await (await c1.approve(ROUTER_ADDRESS, v1)).wait();
+        window.alert("Passo 1: Aprovando Tokens com Gás da ARC...");
+        
+        // Aplicando o gasPrice manual nas aprovações
+        const txA = await c0.approve(ROUTER_ADDRESS, v0, { gasPrice });
+        await txA.wait();
+        const txB = await c1.approve(ROUTER_ADDRESS, v1, { gasPrice });
+        await txB.wait();
 
         const params = {
             token0: token0,
             token1: token1,
-            fee: 3000, // Taxa padrão de 0.3%
-            tickLower: -887220, // Faixa ampla (Full Range)
+            fee: 3000, // Testando com 0.3% primeiro
+            tickLower: -887220, 
             tickUpper: 887220,
             amount0Desired: v0,
             amount1Desired: v1,
@@ -48,13 +55,20 @@ export const gerenciarLiquidez = async (tokenA: string, tokenB: string, amountA:
             deadline: Math.floor(Date.now() / 1000) + 1200
         };
 
-        window.alert("Criando posição na Pool V3...");
-        const tx = await router.mint(params, { gasLimit: 3000000 });
+        window.alert("Passo 2: Enviando Mint (200 Gwei)...");
+        
+        const tx = await router.mint(params, { 
+            gasPrice,
+            gasLimit: 1000000 // Limite alto para garantir
+        });
+
+        console.log("TX enviada com 200 Gwei:", tx.hash);
         await tx.wait();
-        window.alert("✅ Liquidez adicionada com sucesso!");
+        window.alert("✅ SUCESSO! Liquidez adicionada na Arc Testnet.");
 
     } catch (e: any) {
-        console.error(e);
-        window.alert("Erro Synthra: " + (e.reason || e.message));
+        console.error("Erro na transação:", e);
+        const msg = e.reason || e.message;
+        window.alert("Falha na ARC: " + msg);
     }
 };
