@@ -32,7 +32,7 @@ export const calcularValorAutomatico = async (quantidade: string, tokenA: string
     }
 };
 
-export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA: string, amountB: string) => {
+export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA: string, amountB: string, slippage: string) => {
     try {
         const { ethereum } = window as any;
         const provider = new ethers.providers.Web3Provider(ethereum);
