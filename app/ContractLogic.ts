@@ -55,4 +55,49 @@ export const executarSwapContrato = async (tokenA: string, tokenB: string, amoun
     }
 };
 
-export const adicionarLiquidezContrato = async () => {};  // build force 1 
+export const adicionarLiquidez = async (tokenA: string, tokenB: string, amountA: string, amountB: string, slippage: string) => {
+    try {
+        const { ethereum } = window as any;
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const userAddress = await signer.getAddress();
+
+        const POOL_ABI = [
+            "function addLiquidity(uint amountA, uint amountB, uint amountAMin, uint amountBMin, address to) external",
+            "function decimals() public view returns (uint8)"
+        ];
+        
+        const POOL_ADDRESS = "0x8E8A6b6B5445214E9F76E21568478440E0C72570"; 
+        const poolContrato = new ethers.Contract(POOL_ADDRESS, POOL_ABI, signer);
+
+        const dec = 6; 
+        const valA = ethers.utils.parseUnits(amountA.replace(',', '.'), dec);
+        const valB = ethers.utils.parseUnits(amountB.replace(',', '.'), dec);
+
+        // CÁLCULO DINÂMICO BASEADO NO SEU ÍCONE DE SLIPPAGE
+        // Se slippage for 3%, multiplicamos por (100 - 3) = 97 e dividimos por 100
+        const slipPercent = parseFloat(slippage.replace(',', '.'));
+        const fatorSlippage = 100 - slipPercent;
+
+        const minA = valA.mul(Math.floor(fatorSlippage)).div(100);
+        const minB = valB.mul(Math.floor(fatorSlippage)).div(100);
+
+        const tx = await poolContrato.addLiquidity(
+            valA,
+            valB,
+            minA,
+            minB,
+            userAddress,
+            {
+                gasLimit: 1000000,
+                gasPrice: ethers.utils.parseUnits('250', 'gwei')
+            }
+        );
+
+        await tx.wait();
+        window.alert("Liquidez adicionada com a sua slippage de " + slippage + "%!");
+    } catch (e: any) {
+        console.error(e);
+        window.alert("Erro: " + (e.reason || e.message));
+    }
+};

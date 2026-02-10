@@ -111,7 +111,7 @@ function DexApp() {
   };
 
   const clicarNoBotaoPool = () => {
-    adicionarLiquidez(tokenA.address, tokenB.address, amountA, amountB);
+    adicionarLiquidez(tokenA.address, tokenB.address, amountA, amountB, slippage);
   };
 
   if (!mounted) return null;
