@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // ==========================================================
 // CHAMADA DO ARQUIVO 2 (LOGICA DE CONTRATOS)
 // Quando terminarmos, basta copiar o conteúdo do arquivo 2 aqui.
-import { executarSwapContrato, adicionarLiquidezContrato } from './ContractLogic';
+import { executarSwapContrato } from './ContractLogic';
 // ==========================================================
 // CHAMADA DO ARQUIVO 3 (LOGICA DE POOLS)
 import { adicionarLiquidez, calcularValorAutomatico } from './PoolLogic';
